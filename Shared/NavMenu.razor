@@ -1,0 +1,63 @@
+@using Microsoft.AspNetCore.Components.Routing
+@inject NavigationManager Navigation
+
+<nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom shadow-sm">
+    <div class="container-fluid">
+        <a class="navbar-brand d-flex align-items-center" href="/">
+            <img src="images/appicon.svg" alt="logo" style="height:28px; width:28px; margin-right:8px;" />
+            <strong>DayLog</strong>
+        </a>
+
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav"
+                aria-controls="mainNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="mainNav">
+            <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                <li class="nav-item">
+                    <NavLink class="nav-link" href="/timeline" Match="NavLinkMatch.All">Timeline</NavLink>
+                </li>
+                <li class="nav-item">
+                    <NavLink class="nav-link" href="/dashboard">Dashboard</NavLink>
+                </li>
+                <li class="nav-item">
+                    <NavLink class="nav-link" href="/calendar">Calendar</NavLink>
+                </li>
+                <li class="nav-item">
+                    <NavLink class="nav-link" href="/entry">New Entry</NavLink>
+                </li>
+                <li class="nav-item">
+                    <NavLink class="nav-link" href="/settings">Settings</NavLink>
+                </li>
+            </ul>
+
+            <form class="d-flex align-items-center" role="search" onsubmit="return false;">
+                <input class="form-control me-2" placeholder="Search entries..." @oninput="OnSearchInput" />
+                <button class="btn btn-outline-secondary" type="button" @onclick="GoSearch">Search</button>
+            </form>
+        </div>
+    </div>
+</nav>
+
+@code {
+    private string _query = string.Empty;
+
+    private void OnSearchInput(ChangeEventArgs e)
+    {
+        _query = e?.Value?.ToString() ?? string.Empty;
+    }
+
+    private void GoSearch()
+    {
+        if (string.IsNullOrWhiteSpace(_query))
+        {
+            Navigation.NavigateTo("/timeline");
+        }
+        else
+        {
+            // simple approach: navigate to timeline with query param (implement parsing in Timeline.razor)
+            Navigation.NavigateTo($"/timeline?query={Uri.EscapeDataString(_query)}");
+        }
+    }
+}

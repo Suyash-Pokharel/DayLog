@@ -1,0 +1,12 @@
+﻿/* Shared/NavMenu.razor.css */
+.navbar-brand img {
+    filter: hue-rotate(0deg) saturate(1);
+}
+
+.navbar {
+    padding: 0.4rem 1rem;
+}
+
+.nav-link.active {
+    font-weight: 600;
+}
