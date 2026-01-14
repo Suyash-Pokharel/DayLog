@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 using DayLog.Common;
 using DayLog.Models;
 
-namespace DayLog.Services.Interfaces
+namespace DayLog.Services.JournalService
 {
     public interface IJournalService
     {

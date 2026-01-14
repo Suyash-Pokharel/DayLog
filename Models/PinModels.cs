@@ -1,4 +1,4 @@
-// Models/UserAuth.cs
+// Models/PinModels.cs
 using System.ComponentModel.DataAnnotations;
 
 namespace DayLog.Models

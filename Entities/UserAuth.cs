@@ -1,5 +1,6 @@
 ﻿// Entities/UserAuth.cs
 using System;
+using System.ComponentModel.DataAnnotations;
 
 namespace DayLog.Entities
 {
@@ -7,16 +8,16 @@ namespace DayLog.Entities
     {
         public int Id { get; set; }
 
-        // Storing salted hash (Base64) — not the plain PIN
-        public string? PinHash { get; set; }
+        [Required]
+        [MaxLength(100)]
+        public string Username { get; set; } = string.Empty;
 
-        // Salt used for hashing (Base64)
-        public string? PinSalt { get; set; }
-
-        // If you plan to store biometric preference
-        public bool UseBiometrics { get; set; }
+        [Required]
+        [MaxLength(200)]
+        public string Password { get; set; } = string.Empty;
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     }
 }

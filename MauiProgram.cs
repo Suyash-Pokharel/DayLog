@@ -1,8 +1,13 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿// MauiProgram.cs
 using DayLog.Data;
 using DayLog.Services;
 using DayLog.Services.Interfaces;
+using DayLog.Services.JournalService;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Maui.Storage;
+using System;
+using System.IO;
+using System.Linq;
 
 namespace DayLog
 {
@@ -25,30 +30,43 @@ namespace DayLog
                 options.UseSqlite(connStr);
             });
 
-            // Register application services (single place)
-            // Keep exactly one implementation for IJournalService
-            builder.Services.AddScoped<IJournalService, JournalService>();
+            // Session service (singleton so session state is shared app-wide)
+            builder.Services.AddSingleton<ISessionService, SessionService>();
 
-            // Register AuthService (uses SecureStorage, optionally DB fallback)
+            // Auth service (depends on session)
             builder.Services.AddScoped<IAuthService, AuthService>();
 
-            // Add any other services you need
-            // builder.Services.AddScoped<ITagService, TagService>();
-            // builder.Services.AddScoped<IAnalyticsService, AnalyticsService>();
+            // Journal service and other app services
+            builder.Services.AddScoped<IJournalService, JournalService>();
 
+            // Add Blazor (keep this last among service registrations)
             builder.Services.AddMauiBlazorWebView();
-
 #if DEBUG
             builder.Services.AddBlazorWebViewDeveloperTools();
 #endif
 
             var app = builder.Build();
 
-            // Ensure DB created at startup (prototype mode)
+            // Ensure DB created at startup (prototype mode) and initialize session
             using (var scope = app.Services.CreateScope())
             {
+                // ensure DB and seed a demo user if none exist
                 var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
                 db.Database.EnsureCreated();
+
+                if (!db.UserAuths.Any())
+                {
+                    db.UserAuths.Add(new DayLog.Entities.UserAuth
+                    {
+                        Username = "student",
+                        Password = "password" // change for testing if desired
+                    });
+                    db.SaveChanges();
+                }
+
+                // initialize session service so logged-in state is read on startup
+                var session = scope.ServiceProvider.GetRequiredService<ISessionService>();
+                session.InitializeAsync().GetAwaiter().GetResult(); // synchronous init at startup (assignment OK)
             }
 
             return app;

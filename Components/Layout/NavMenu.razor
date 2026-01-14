@@ -1,27 +1,64 @@
-﻿<div class="top-row ps-3 navbar navbar-dark">
+@namespace DayLog.Components.Layout
+@using Microsoft.AspNetCore.Components.Routing
+@inject NavigationManager Navigation
+
+<nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom shadow-sm">
     <div class="container-fluid">
-        <a class="navbar-brand" href="">DayLog</a>
+        <a class="navbar-brand d-flex align-items-center" href="/">
+            <img src="images/appicon.svg" alt="logo" style="height:28px; width:28px; margin-right:8px;" />
+            <strong>DayLog</strong>
+        </a>
+
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav"
+                aria-controls="mainNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="mainNav">
+            <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                <li class="nav-item">
+                    <NavLink class="nav-link" href="/timeline" Match="NavLinkMatch.All">Timeline</NavLink>
+                </li>
+                <li class="nav-item">
+                    <NavLink class="nav-link" href="/dashboard">Dashboard</NavLink>
+                </li>
+                <li class="nav-item">
+                    <NavLink class="nav-link" href="/calendar">Calendar</NavLink>
+                </li>
+                <li class="nav-item">
+                    <NavLink class="nav-link" href="/entry">New Entry</NavLink>
+                </li>
+                <li class="nav-item">
+                    <NavLink class="nav-link" href="/settings">Settings</NavLink>
+                </li>
+            </ul>
+
+            <form class="d-flex align-items-center" role="search" onsubmit="return false;">
+                <input class="form-control me-2" placeholder="Search entries..." @oninput="OnSearchInput" />
+                <button class="btn btn-outline-secondary" type="button" @onclick="GoSearch">Search</button>
+            </form>
+        </div>
     </div>
-</div>
+</nav>
 
-<input type="checkbox" title="Navigation menu" class="navbar-toggler" />
+@code {
+    private string _query = string.Empty;
 
-<div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
-    <nav class="flex-column">
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Home
-            </NavLink>
-        </div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="counter">
-                <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> Counter
-            </NavLink>
-        </div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="weather">
-                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Weather
-            </NavLink>
-        </div>
-    </nav>
-</div>
+    private void OnSearchInput(ChangeEventArgs e)
+    {
+        _query = e?.Value?.ToString() ?? string.Empty;
+    }
+
+    private void GoSearch()
+    {
+        if (string.IsNullOrWhiteSpace(_query))
+        {
+            Navigation.NavigateTo("/timeline");
+        }
+        else
+        {
+            // simple approach: navigate to timeline with query param (implement parsing in Timeline.razor)
+            Navigation.NavigateTo($"/timeline?query={Uri.EscapeDataString(_query)}");
+        }
+    }
+}

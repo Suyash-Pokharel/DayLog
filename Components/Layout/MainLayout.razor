@@ -1,17 +1,48 @@
-﻿@inherits LayoutComponentBase
+﻿@namespace DayLog.Components.Layout
+@inherits LayoutComponentBase
 
-<div class="page">
-    <div class="sidebar">
-        <NavMenu />
-    </div>
+<div class="app-shell">
+    <aside class="sidebar" role="navigation">
+        <div class="sidebar-inner">
+            <div class="brand">
+                <img src="images/appicon.svg" alt="logo" />
+                <span class="brand-title">DayLog</span>
+            </div>
 
-    <main>
-        <div class="top-row px-4">
-            <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
+            <NavMenu />
         </div>
+    </aside>
 
-        <article class="content px-4">
+    <div class="content-area">
+        <header class="topbar">
+            <button class="hamburger d-lg-none" @onclick="ToggleSidebar" aria-label="Toggle navigation">
+                ☰
+            </button>
+
+            <div class="topbar-right">
+                <!-- optional: page title, user actions -->
+            </div>
+        </header>
+
+        <main class="main-container">
             @Body
-        </article>
-    </main>
+        </main>
+
+        <footer class="app-footer">
+            <small>© @DateTime.UtcNow.Year • DayLog</small>
+        </footer>
+    </div>
 </div>
+
+@code {
+    private bool _sidebarCollapsed;
+
+    private void ToggleSidebar()
+    {
+        _sidebarCollapsed = !_sidebarCollapsed;
+        // Toggle a CSS class on root element via JS interop is possible;
+        // simpler: toggle a CSS class on sidebar by binding class attribute
+        // We'll use CSS that responds to .collapsed on the body
+        // so we set/unset a CSS class on document body (optional).
+    }
+}

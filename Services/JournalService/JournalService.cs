@@ -8,10 +8,9 @@ using DayLog.Common;
 using DayLog.Data;
 using DayLog.Entities;
 using DayLog.Models;
-using DayLog.Services.Interfaces;
-using DayLog.Helpers; // HtmlUtils for preview/strip helpers
+using DayLog.Helpers;
 
-namespace DayLog.Services
+namespace DayLog.Services.JournalService
 {
     public class JournalService : IJournalService
     {
