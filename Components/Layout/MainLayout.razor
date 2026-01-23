@@ -1,6 +1,11 @@
 ﻿@namespace DayLog.Components.Layout
 @inherits LayoutComponentBase
 
+@using DayLog.Components.Layout
+
+@inject DayLog.Services.Interfaces.IAuthService AuthService
+@inject NavigationManager Navigation
+
 <div class="app-shell">
     <aside class="sidebar" role="navigation">
         <div class="sidebar-inner">
@@ -8,7 +13,6 @@
                 <img src="images/appicon.svg" alt="logo" />
                 <span class="brand-title">DayLog</span>
             </div>
-
             <NavMenu />
         </div>
     </aside>
@@ -16,9 +20,8 @@
     <div class="content-area">
         <header class="topbar">
             <button class="hamburger d-lg-none" @onclick="ToggleSidebar" aria-label="Toggle navigation">
-                ☰
+                &#9776;
             </button>
-
             <div class="topbar-right">
                 <!-- optional: page title, user actions -->
             </div>
@@ -29,13 +32,38 @@
         </main>
 
         <footer class="app-footer">
-            <small>© @DateTime.UtcNow.Year • DayLog</small>
+            <small>&copy; @DateTime.UtcNow.Year &#8226; DayLog</small>
         </footer>
     </div>
 </div>
 
 @code {
     private bool _sidebarCollapsed;
+    private bool _checkedAuth = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Only check auth if not already on /login
+        if (!Navigation.Uri.EndsWith("/login", StringComparison.OrdinalIgnoreCase))
+        {
+            var loggedIn = await AuthService.IsLoggedInAsync();
+            if (!loggedIn)
+            {
+                Navigation.NavigateTo("/login", true);
+                return;
+            }
+        }
+        _checkedAuth = true;
+    }
+
+    private void ToggleSidebar()
+    {
+        _sidebarCollapsed = !_sidebarCollapsed;
+    }
+        }
+        _checkedAuth = true;
+    }
+>>>>>>> ecb1992 (Login Page)
 
     private void ToggleSidebar()
     {
@@ -46,3 +74,42 @@
         // so we set/unset a CSS class on document body (optional).
     }
 }
+<<<<<<< HEAD
+=======
+
+@if (_checkedAuth || Navigation.Uri.EndsWith("/login", StringComparison.OrdinalIgnoreCase))
+{
+    <div class="app-shell">
+        <aside class="sidebar" role="navigation">
+            <div class="sidebar-inner">
+                <div class="brand">
+                    <img src="images/appicon.svg" alt="logo" />
+                    <span class="brand-title">DayLog</span>
+                </div>
+
+                <NavMenu />
+            </div>
+        </aside>
+
+        <div class="content-area">
+            <header class="topbar">
+                <button class="hamburger d-lg-none" @onclick="ToggleSidebar" aria-label="Toggle navigation">
+                    ☰
+                </button>
+
+                <div class="topbar-right">
+                    <!-- optional: page title, user actions -->
+                </div>
+            </header>
+
+            <main class="main-container">
+                @Body
+            </main>
+
+            <footer class="app-footer">
+                <small>© @DateTime.UtcNow.Year • DayLog</small>
+            </footer>
+        </div>
+    </div>
+}
+>>>>>>> ecb1992 (Login Page)

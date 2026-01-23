@@ -1,8 +1,69 @@
-﻿/*#if (SampleContent)*/
-html, body {
-    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+/* Main color variables for reuse */
+:root {
+    --color-primary: #197278;
+    --color-primary-hover: #289ca6;
+    --color-accent: #f4d35e;
+    --color-bg-main: #f9faf8;
+    --color-secondary: #283d3b;
+    --color-error: #e63946;
 }
 
+html, body {
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    background: var(--color-bg-main);
+}
+
+label {
+    color: var(--color-secondary);
+    font-weight: 500;
+    margin-bottom: 0.3rem;
+    display: block;
+}
+
+.form-control {
+    border: 1.5px solid var(--color-primary);
+    border-radius: 8px;
+    font-size: 1rem;
+    background: var(--color-bg-main);
+    color: var(--color-secondary);
+    transition: border-color 0.2s;
+}
+
+.form-control:focus {
+    border-color: var(--color-accent);
+    outline: none;
+}
+
+.error-message {
+    color: var(--color-error);
+    background: #fff0f0;
+    border: 1px solid var(--color-error);
+    border-radius: 6px;
+    padding: 0.6rem 1rem;
+    margin-bottom: 1rem;
+    font-size: 1rem;
+    text-align: center;
+}
+
+.spinner {
+    display: inline-block;
+    width: 1.1em;
+    height: 1.1em;
+    border: 2.5px solid var(--color-accent);
+    border-top: 2.5px solid var(--color-primary);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin-right: 0.5em;
+    vertical-align: middle;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/*#if (SampleContent)*/
+>>>>>>> ecb1992 (Login Page)
 a, .btn-link {
     color: #006bb7;
 }
