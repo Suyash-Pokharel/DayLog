@@ -6,6 +6,9 @@ obj/
 *.suo
 *.userosscache
 *.sln.docstates
+.git
+.github
+.gitignore
 
 # Rider
 .idea/

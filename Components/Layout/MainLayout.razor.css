@@ -1,87 +1,102 @@
 /* Components/Layout/MainLayout.razor.css */
 
 .app-shell {
-    display: flex;
-    min-height: 100vh;
-    background: var(--bs-body-bg, #fff);
-    color: var(--bs-body-color, #333);
+  display: flex;
+  min-height: 100vh;
+  /* use the app's main background color so pages match global theme */
+  background: var(--color-app-bg, var(--color-bg-main, #f4f7f6));
+  color: var(--bs-body-color, #333);
 }
 
 /* Sidebar */
 .sidebar {
-    width: 260px;
-    background: #ffffff;
-    border-right: 1px solid rgba(0,0,0,0.06);
-    box-shadow: 0 1px 3px rgba(0,0,0,0.03);
-    padding: 1rem 0.5rem;
-    flex-shrink: 0;
+  width: 260px;
+  background: var(--color-sidebar-bg, #f1f6f6);
+  border-right: 1px solid rgba(35, 52, 49, 0.06);
+  box-shadow: none; /* remove floating shadow */
+  padding: 1rem 0.5rem;
+  flex-shrink: 0;
+  position: fixed; /* keep sidebar fixed when page scrolls */
+  top: 0;
+  left: 0;
+  bottom: 0;
+  height: 100vh;
+  overflow: auto;
 }
 
 .sidebar .brand {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem 1rem;
-    margin-bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  margin-bottom: 0.5rem;
 }
 
-.sidebar .brand img { height: 28px; width: 28px; }
-.brand-title { font-weight: 700; font-size: 1.05rem; }
+.sidebar .brand img {
+  height: 28px;
+  width: 28px;
+}
+.brand-title {
+  font-weight: 700;
+  font-size: 1.05rem;
+}
 
 /* Content area */
 .content-area {
-    flex: 1 1 auto;
-    display: flex;
-    flex-direction: column;
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  margin-left: 260px; /* account for fixed sidebar */
 }
 
 .topbar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0.5rem 1rem;
-    border-bottom: 1px solid rgba(0,0,0,0.06);
-    background: white;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 1rem;
+  border-bottom: 1px solid rgba(35, 52, 49, 0.06);
+  background: var(--color-surface, #ffffff);
 }
 
 .hamburger {
-    font-size: 1.25rem;
-    background: transparent;
-    border: none;
-    line-height: 1;
+  font-size: 1.25rem;
+  background: transparent;
+  border: none;
+  line-height: 1;
 }
 
 /* main container */
 .main-container {
-    padding: 1.25rem;
-    flex: 1 1 auto;
+  padding: 1.25rem;
+  flex: 1 1 auto;
 }
 
 /* footer */
 .app-footer {
-    padding: 0.75rem 1rem;
-    border-top: 1px solid rgba(0,0,0,0.06);
-    text-align: center;
-    font-size: .9rem;
+  padding: 0.75rem 1rem;
+  border-top: 1px solid rgba(35, 52, 49, 0.06);
+  text-align: center;
+  font-size: 0.9rem;
 }
 
 /* Responsive: collapse the sidebar on small screens */
 @media (max-width: 991.98px) {
-    .sidebar {
-        position: fixed;
-        left: -320px;
-        top: 0;
-        bottom: 0;
-        z-index: 1000;
-        width: 260px;
-        transition: left 0.18s ease-in-out;
-    }
+  .sidebar {
+    /* small screens: make sidebar overlay and hidden by default */
+    position: fixed;
+    left: -320px;
+    top: 0;
+    bottom: 0;
+    z-index: 1000;
+    width: 260px;
+    transition: left 0.18s ease-in-out;
+  }
 
-    .app-shell.show-sidebar .sidebar {
-        left: 0;
-    }
+  .app-shell.show-sidebar .sidebar {
+    left: 0;
+  }
 
-    .content-area {
-        margin-left: 0;
-    }
+  .content-area {
+    margin-left: 0; /* no left margin for small screens when sidebar overlays */
+  }
 }

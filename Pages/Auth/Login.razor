@@ -57,11 +57,9 @@
 
     protected override void OnInitialized()
     {
+        // Create EditContext for the form. Do not auto-validate on every field change
+        // to avoid showing required-field errors while a user is still focusing inputs.
         editContext = new EditContext(loginModel);
-        editContext.OnFieldChanged += (sender, args) =>
-        {
-            ((EditContext)sender!).Validate();
-        };
     }
 
     private async Task HandleLogin()

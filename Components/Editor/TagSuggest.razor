@@ -1,0 +1,114 @@
+@using Microsoft.EntityFrameworkCore
+@inject DayLog.Data.AppDbContext Db
+
+<div class="tag-suggest">
+  <div class="tag-chips mb-2">
+    @foreach (var t in CurrentTags)
+    {
+      <span class="badge bg-light text-dark me-1">@t <button type="button" class="btn-close btn-close-sm ms-1" aria-label="Remove" @onclick="() => RemoveTag(t)"></button></span>
+    }
+  </div>
+
+    <input class="form-control" placeholder="Add tag..." @oninput="OnInput" @onfocus="ShowSuggestions" onkeypress="if(event.key==='Enter'){event.preventDefault();}" @onkeydown="OnKeyDown" @bind="SearchText" />
+
+  @if (ShowSuggest && Suggestions?.Any() == true)
+  {
+    <ul class="list-group mt-1 suggestion-list">
+      @foreach (var s in Suggestions)
+      {
+        <li class="list-group-item list-group-item-action" @onclick="() => PickSuggestion(s)">@s</li>
+      }
+    </ul>
+  }
+</div>
+
+@code {
+    [Parameter] public string? Value { get; set; }
+    [Parameter] public EventCallback<string> ValueChanged { get; set; }
+
+    private List<string> CurrentTags => ParseTags(Value);
+    private List<string> Suggestions = new();
+    private string SearchText { get; set; } = string.Empty;
+    private bool ShowSuggest { get; set; } = false;
+
+    private async Task OnInput(ChangeEventArgs e)
+    {
+        SearchText = e?.Value?.ToString() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(SearchText))
+        {
+            Suggestions.Clear();
+            return;
+        }
+
+        var q = SearchText.Trim();
+        Suggestions = await Db.Tags
+            .Where(t => EF.Functions.Like(t.Name, $"%{q}%"))
+            .OrderBy(t => t.Name)
+            .Select(t => t.Name)
+            .Take(10)
+            .ToListAsync();
+
+        // exclude already selected
+        Suggestions = Suggestions.Where(s => !CurrentTags.Contains(s, StringComparer.OrdinalIgnoreCase)).ToList();
+        ShowSuggest = Suggestions.Any();
+    }
+
+    private void ShowSuggestions(FocusEventArgs _) => ShowSuggest = true;
+
+    private async Task PickSuggestion(string s)
+    {
+        await AddTag(s);
+        SearchText = string.Empty;
+        Suggestions.Clear();
+        ShowSuggest = false;
+    }
+
+    private async Task AddTag(string tag)
+    {
+        var tags = CurrentTags;
+        if (!tags.Contains(tag, StringComparer.OrdinalIgnoreCase))
+        {
+            tags.Add(tag);
+        }
+        await UpdateValueFromList(tags);
+    }
+
+    private async Task RemoveTag(string tag)
+    {
+        var tags = CurrentTags;
+        tags.RemoveAll(t => string.Equals(t, tag, StringComparison.OrdinalIgnoreCase));
+        await UpdateValueFromList(tags);
+    }
+
+    private async Task UpdateValueFromList(List<string> tags)
+    {
+        var csv = string.Join(',', tags.Where(t => !string.IsNullOrWhiteSpace(t)).Select(t => t.Trim()));
+        Value = csv;
+        await ValueChanged.InvokeAsync(Value);
+    }
+
+    private async Task OnKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && !string.IsNullOrWhiteSpace(SearchText))
+        {
+            await AddTag(SearchText.Trim());
+            SearchText = string.Empty;
+            Suggestions.Clear();
+            ShowSuggest = false;
+        }
+        else if (e.Key == "Escape")
+        {
+            ShowSuggest = false;
+        }
+    }
+
+    private static List<string> ParseTags(string? csv)
+    {
+        if (string.IsNullOrWhiteSpace(csv)) return new List<string>();
+        return csv.Split(',', StringSplitOptions.RemoveEmptyEntries)
+            .Select(s => s.Trim())
+            .Where(s => !string.IsNullOrEmpty(s))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+}

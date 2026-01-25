@@ -6,29 +6,18 @@
 <div class="navmenu-container">
     <ul class="sidebar-nav">
         <li class="nav-item">
-            <NavLink class="nav-link" href="/timeline" Match="NavLinkMatch.All">Timeline</NavLink>
-        </li>
-        <li class="nav-item">
-            <NavLink class="nav-link" href="/dashboard">Dashboard</NavLink>
+            <NavLink class="nav-link" href="/dashboard" Match="NavLinkMatch.All">Dashboard</NavLink>
         </li>
         <li class="nav-item">
             <NavLink class="nav-link" href="/calendar">Calendar</NavLink>
         </li>
         <li class="nav-item">
-            <NavLink class="nav-link" href="/entry">New Entry</NavLink>
+            <NavLink class="nav-link" href="/timeline">Timeline</NavLink>
         </li>
         <li class="nav-item">
-            <NavLink class="nav-link" href="/settings">Settings</NavLink>
+            <NavLink class="nav-link" href="/Edit-entry">New Entry</NavLink>
         </li>
-    </ul>
-    <form class="sidebar-search" role="search" onsubmit="return false;">
-        <input class="form-control" placeholder="Search entries..." @oninput="OnSearchInput" />
-        <button class="btn btn-outline-secondary" type="button" @onclick="GoSearch">Search</button>
-    </form>
-</div>
-<div>
-    <ul>
-        <li>
+        <li class="nav-item">
             <NavLink class="nav-link" href="/settings">Settings</NavLink>
         </li>
     </ul>

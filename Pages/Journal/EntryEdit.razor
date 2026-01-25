@@ -1,5 +1,129 @@
-﻿<h3>EntryEdit</h3>
+﻿@page "/Edit-entry"
+@using DayLog.Models
+@using DayLog.Services.JournalService
+@using DayLog.Components.Editor
+@inject IJournalService JournalService
+@inject NavigationManager Navigation
+
+<div class="entry-editor card">
+    <div class="card-body">
+        <h2 class="mb-3">New Entry</h2>
+
+        <EditForm Model="@vm" OnValidSubmit="HandleValidSubmit">
+            <DataAnnotationsValidator />
+
+            <div class="mb-3">
+                <label class="form-label">Title</label>
+                <InputText class="form-control" @bind-Value="vm.Title" placeholder="Entry title (optional)" />
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Date</label>
+                <InputDate class="form-control" @bind-Value="vm.EntryDate" />
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Mood</label>
+                <InputSelect class="form-control" @bind-Value="vm.PrimaryMoodId">
+                    <option value="0">-- select mood --</option>
+                    @foreach (var m in Moods)
+                    {
+                        <option value="@m.Id">@m.Emoji @m.Name</option>
+                    }
+                </InputSelect>
+                <ValidationSummary />
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Tags</label>
+                <TagSuggest Value="@vm.TagsCsv" ValueChanged="@(v => vm.TagsCsv = v)" />
+                <div class="form-text">Press Enter to add a custom tag or pick from suggestions.</div>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Content</label>
+                <QuillEditor Value="@vm.ContentHtml" ValueChanged="@(v => vm.ContentHtml = v)" HeightPx="200"
+                    Placeholder="Write your journal entry..." />
+            </div>
+
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-primary">Save</button>
+                <button type="button" class="btn btn-secondary" @onclick="Cancel">Cancel</button>
+                @if (!string.IsNullOrEmpty(StatusMessage))
+                {
+                    <div class="ms-3 text-muted">@StatusMessage</div>
+                }
+                @if (ConflictEntryId.HasValue)
+                {
+                    <button type="button" class="btn btn-outline-danger ms-2" @onclick="DeleteConflictAsync">Delete existing
+                        (id:@ConflictEntryId)</button>
+                }
+            </div>
+        </EditForm>
+    </div>
+</div>
 
 @code {
+    private EntryViewModel vm = new EntryViewModel();
+    private string StatusMessage { get; set; } = string.Empty;
+    private int? ConflictEntryId { get; set; }
 
+    private record Mood(int Id, string Emoji, string Name);
+
+    private readonly List<Mood> Moods = new()
+{
+new Mood(1, "😊", "Happy"),
+new Mood(2, "😐", "Neutral"),
+new Mood(3, "😢", "Sad"),
+new Mood(4, "🤩", "Excited"),
+new Mood(5, "😰", "Anxious"),
+};
+
+    // EntryViewModel defaults EntryDate to today; no initialization required here.
+
+    private async Task HandleValidSubmit()
+    {
+        StatusMessage = "Saving...";
+        ConflictEntryId = null;
+        var res = await JournalService.SaveAsync(vm);
+        if (res.Success)
+        {
+            Navigation.NavigateTo("/dashboard");
+        }
+        else
+        {
+            StatusMessage = res.ErrorMessage ?? "Save failed";
+            // detect conflict id pattern like "(id:123)" and expose action buttons
+            if (!string.IsNullOrEmpty(res.ErrorMessage))
+            {
+                var idx = res.ErrorMessage.IndexOf("id:", StringComparison.OrdinalIgnoreCase);
+                if (idx >= 0)
+                {
+                    var rest = res.ErrorMessage.Substring(idx + 3);
+                    var digits = new string(rest.TakeWhile(c => char.IsDigit(c)).ToArray());
+                    if (int.TryParse(digits, out var parsed)) ConflictEntryId = parsed;
+                }
+            }
+        }
+    }
+
+    private async Task DeleteConflictAsync()
+    {
+        if (!ConflictEntryId.HasValue) return;
+        var delRes = await JournalService.DeleteAsync(ConflictEntryId.Value);
+        if (delRes.Success)
+        {
+            StatusMessage = $"Deleted existing entry (id:{ConflictEntryId.Value}). You can now save a new entry.";
+            ConflictEntryId = null;
+        }
+        else
+        {
+            StatusMessage = delRes.ErrorMessage ?? "Delete failed.";
+        }
+    }
+
+    private void Cancel()
+    {
+        Navigation.NavigateTo("/dashboard");
+    }
 }

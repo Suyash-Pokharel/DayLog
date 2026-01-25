@@ -14,8 +14,8 @@ namespace DayLog.Models
         [MaxLength(200)]
         public string? Title { get; set; }
 
-        // Primary mood required
-        [Range(1, int.MaxValue, ErrorMessage = "Please select a primary mood")]
+        // Mood required
+        [Range(1, int.MaxValue, ErrorMessage = "Please select a Mood")]
         public int PrimaryMoodId { get; set; }
 
         public string? TagsCsv { get; set; }

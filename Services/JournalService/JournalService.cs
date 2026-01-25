@@ -16,6 +16,8 @@ namespace DayLog.Services.JournalService
     {
         private readonly AppDbContext _db;
 
+        private record ConflictInfo(int? ConflictId, int RemovedCount);
+
         public JournalService(AppDbContext db)
         {
             _db = db;
@@ -49,7 +51,7 @@ namespace DayLog.Services.JournalService
             }
 
             // Truncate to 300 characters for preview
-            var previewText = plain.Length > 300 ? plain.Substring(0, 300) + "…" : plain;
+            var previewText = plain.Length > 300 ? plain.Substring(0, 300) + "ï¿½" : plain;
 
             return new EntryDisplayModel
             {
@@ -229,8 +231,18 @@ namespace DayLog.Services.JournalService
 
                 LogEntry entity;
 
+                var entryDateStart = model.EntryDate.Date;
+                var entryDateEnd = entryDateStart.AddDays(1);
+
                 if (model.Id == 0)
                 {
+                    // New entry: ensure there's no existing entry for the same calendar day
+                    var exists = await _db.LogEntries.AnyAsync(e => e.EntryDate >= entryDateStart && e.EntryDate < entryDateEnd);
+                    if (exists)
+                    {
+                        return ServiceResult<EntryDisplayModel>.Fail("An entry for this date already exists. Edit or delete that entry before creating a new one.");
+                    }
+
                     // New entry
                     entity = FromViewModel(model, null);
                     // CreatedAt and UpdatedAt have been set in FromViewModel for new entity
@@ -238,19 +250,68 @@ namespace DayLog.Services.JournalService
                 }
                 else
                 {
-                    // Update existing
+                    // Update existing: ensure moving date doesn't collide with another entry
                     var existing = await _db.LogEntries.FindAsync(model.Id);
                     if (existing == null) return ServiceResult<EntryDisplayModel>.Fail("Not found");
+
+                    var conflict = await _db.LogEntries
+                        .Where(e => e.Id != model.Id && e.EntryDate >= entryDateStart && e.EntryDate < entryDateEnd)
+                        .AnyAsync();
+                    if (conflict)
+                    {
+                        return ServiceResult<EntryDisplayModel>.Fail("Another entry already exists for the selected date. Choose a different date or delete the other entry.");
+                    }
 
                     entity = FromViewModel(model, existing);
                     _db.LogEntries.Update(entity);
                 }
 
-                await _db.SaveChangesAsync();
+                try
+                {
+                    await _db.SaveChangesAsync();
 
-                // Refresh entity from DB to ensure all fields (e.g., Id) are populated
-                var saved = await _db.LogEntries.FindAsync(entity.Id);
-                return ServiceResult<EntryDisplayModel>.Ok(ToDisplay(saved!));
+                    // Refresh entity from DB to ensure all fields (e.g., Id) are populated
+                    var saved = await _db.LogEntries.FindAsync(entity.Id);
+                    return ServiceResult<EntryDisplayModel>.Ok(ToDisplay(saved!));
+                }
+                catch (DbUpdateException)
+                {
+                    // Database constraint violated (unique index on EntryDate) â€” attempt to provide a friendly response.
+                    try
+                    {
+                        // First, try to clean obvious duplicates and report how many were removed.
+                        var dedupeRes = await DeduplicateAsync();
+                        int removed = 0;
+                        if (dedupeRes.Success && dedupeRes.Data >= 0)
+                        {
+                            removed = dedupeRes.Data;
+                        }
+
+                        // Find existing entry for the conflicting date to provide an actionable id
+                        var existing = await _db.LogEntries.FirstOrDefaultAsync(e => e.EntryDate >= entryDateStart && e.EntryDate < entryDateEnd);
+                        if (existing != null)
+                        {
+                            var msg = removed > 0
+                                ? $"Conflict: {removed} duplicate row(s) were removed. An entry for this date already exists (id:{existing.Id}). You can edit or delete that entry."
+                                : $"An entry for this date already exists (id:{existing.Id}). You can edit or delete that entry.";
+                            var info = new ConflictInfo(existing.Id, removed);
+                            return ServiceResult<EntryDisplayModel>.Fail(msg, info);
+                        }
+                        else
+                        {
+                            var msg = removed > 0
+                                ? $"Conflict detected and {removed} duplicate row(s) were removed, but an entry for this date still prevents creating a new one."
+                                : "An entry for this date already exists; please edit or delete it before creating a new one.";
+                            var info = new ConflictInfo(null, removed);
+                            return ServiceResult<EntryDisplayModel>.Fail(msg, info);
+                        }
+                    }
+                    catch
+                    {
+                        // If anything goes wrong while recovering, surface a generic friendly message
+                        return ServiceResult<EntryDisplayModel>.Fail("Unable to save entry: an entry for this date already exists. Edit or delete the existing entry.");
+                    }
+                }
             }
             catch (Exception ex)
             {
@@ -265,6 +326,58 @@ namespace DayLog.Services.JournalService
             _db.LogEntries.Remove(e);
             await _db.SaveChangesAsync();
             return ServiceResult<bool>.Ok(true);
+        }
+
+        // Deduplicate existing entries according to rules described by product:
+        // 1) For groups with the same Id:
+        //    - If CreatedAt values are equal, keep the row with the newest UpdatedAt.
+        //    - If CreatedAt values differ, keep the row with the earliest CreatedAt.
+        // 2) After resolving same-Id groups, for remaining rows that share the same CreatedAt,
+        //    keep the row with the smallest Id and delete the rest.
+        public async Task<ServiceResult<int>> DeduplicateAsync()
+        {
+            // Load all entries
+            var entries = await _db.LogEntries.OrderBy(e => e.Id).ToListAsync();
+            var toDelete = new List<LogEntry>();
+
+            // Step 1: handle groups by Id (defensive: although Id should be unique)
+            var byId = entries.GroupBy(e => e.Id).Where(g => g.Count() > 1);
+            foreach (var g in byId)
+            {
+                var list = g.ToList();
+                var createdDistinctCount = list.Select(x => x.CreatedAt).Distinct().Count();
+                if (createdDistinctCount == 1)
+                {
+                    // same CreatedAt: keep newest UpdatedAt
+                    var keep = list.OrderByDescending(x => x.UpdatedAt).First();
+                    toDelete.AddRange(list.Where(x => x != keep));
+                }
+                else
+                {
+                    // different CreatedAt: keep earliest CreatedAt
+                    var keep = list.OrderBy(x => x.CreatedAt).First();
+                    toDelete.AddRange(list.Where(x => x != keep));
+                }
+            }
+
+            // Step 2: among remaining (not already marked) rows, handle same CreatedAt groups
+            var remaining = entries.Except(toDelete).ToList();
+            var byCreated = remaining.GroupBy(e => e.CreatedAt).Where(g => g.Count() > 1);
+            foreach (var g in byCreated)
+            {
+                var list = g.OrderBy(x => x.Id).ToList();
+                var keep = list.First(); // smallest Id
+                toDelete.AddRange(list.Where(x => x != keep));
+            }
+
+            if (toDelete.Count == 0)
+            {
+                return ServiceResult<int>.Ok(0);
+            }
+
+            _db.LogEntries.RemoveRange(toDelete);
+            await _db.SaveChangesAsync();
+            return ServiceResult<int>.Ok(toDelete.Count);
         }
     }
 }

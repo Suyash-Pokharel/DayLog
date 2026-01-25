@@ -18,8 +18,10 @@ namespace DayLog.Data
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            // index EntryDate for faster date queries
-            modelBuilder.Entity<LogEntry>().HasIndex(e => e.EntryDate);
+            // index EntryDate for faster date queries and enforce one entry per day
+            modelBuilder.Entity<LogEntry>()
+                .HasIndex(e => e.EntryDate)
+                .IsUnique();
 
             // tag name uniqueness (keeps earlier behavior)
             modelBuilder.Entity<Tag>()

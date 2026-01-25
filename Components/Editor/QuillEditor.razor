@@ -1,7 +1,7 @@
 @using Microsoft.JSInterop
 @implements IAsyncDisposable
 
-<div id="@EditorId" class="quill-editor-root" style="min-height:@HeightPxPx; background:white;"></div>
+<div id="@EditorId" class="quill-editor-root" style="min-height:@HeightPxPx; background:var(--color-surface, white);"></div>
 
 @code {
     [Parameter] public string? Value { get; set; }
@@ -61,7 +61,7 @@
     {
         if (!_initialized)
         {
-            // not initialized yet — store local; OnAfterRender will set initial content
+            // not initialized yet ï¿½ store local; OnAfterRender will set initial content
             _lastKnownValue = html;
             return;
         }

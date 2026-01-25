@@ -18,22 +18,23 @@
     </aside>
 
     <div class="content-area">
-        <header class="topbar">
-            <button class="hamburger d-lg-none" @onclick="ToggleSidebar" aria-label="Toggle navigation">
-                &#9776;
-            </button>
-            <div class="topbar-right">
-                <!-- optional: page title, user actions -->
-            </div>
-        </header>
+        @if (!Navigation.Uri.EndsWith("/Edit-entry", StringComparison.OrdinalIgnoreCase))
+        {
+            <header class="topbar">
+                <button class="hamburger d-lg-none" @onclick="ToggleSidebar" aria-label="Toggle navigation">
+                    &#9776;
+                </button>
+                <div class="topbar-right">
+                    <!-- optional: page title, user actions -->
+                </div>
+            </header>
+        }
 
         <main class="main-container">
             @Body
         </main>
 
-        <footer class="app-footer">
-            <small>&copy; @DateTime.UtcNow.Year &#8226; DayLog</small>
-        </footer>
+        <!-- footer removed per design preference -->
     </div>
 </div>
 

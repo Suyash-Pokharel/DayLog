@@ -10,3 +10,25 @@
 .nav-link.active {
     font-weight: 600;
 }
+/* Sidebar nav list: remove default bullets and tighten spacing */
+.sidebar-nav {
+    list-style: none;
+    margin: 0;
+    padding: 0.25rem 0.5rem;
+}
+
+.sidebar-nav .nav-item {
+    margin: 0.25rem 0;
+}
+
+.sidebar-nav .nav-link {
+    display: block;
+    padding: 0.45rem 0.5rem;
+    color: var(--bs-body-color, #333);
+    text-decoration: none;
+}
+
+.sidebar-nav .nav-link:hover {
+    background: rgba(0,0,0,0.02);
+    border-radius: 4px;
+}
