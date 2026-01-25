@@ -66,7 +66,7 @@ namespace DayLog
 
                 // initialize session service so logged-in state is read on startup
                 var session = scope.ServiceProvider.GetRequiredService<ISessionService>();
-                session.InitializeAsync().GetAwaiter().GetResult(); // synchronous init at startup (assignment OK)
+                //session.InitializeAsync().GetAwaiter().GetResult(); // synchronous init at startup (assignment OK)
             }
 
             return app;
