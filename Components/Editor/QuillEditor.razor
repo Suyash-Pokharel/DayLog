@@ -1,0 +1,97 @@
+@using Microsoft.JSInterop
+@implements IAsyncDisposable
+
+<div id="@EditorId" class="quill-editor-root" style="min-height:@HeightPxPx; background:white;"></div>
+
+@code {
+    [Parameter] public string? Value { get; set; }
+    [Parameter] public EventCallback<string> ValueChanged { get; set; }
+
+    [Parameter] public EventCallback<string> OnTextChanged { get; set; }
+
+    [Parameter] public int HeightPx { get; set; } = 240;
+    [Parameter] public string Placeholder { get; set; } = "Write here...";
+    [Parameter] public bool ReadOnly { get; set; } = false;
+
+    [Inject] private IJSRuntime JS { get; set; } = default!;
+
+    private readonly string EditorId = $"quill_{Guid.NewGuid():N}";
+    private DotNetObjectReference<QuillEditor>? _dotNetRef;
+    private bool _initialized = false;
+    private string? _lastKnownValue;
+
+    private string HeightPxPx => HeightPx > 0 ? $"{HeightPx}px" : "240px";
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !_initialized)
+        {
+            _dotNetRef = DotNetObjectReference.Create(this);
+            await JS.InvokeVoidAsync("daylogQuill.init", EditorId, Value ?? string.Empty, Placeholder, ReadOnly, _dotNetRef);
+            _initialized = true;
+            _lastKnownValue = Value;
+        }
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        // If parent changed Value, update editor (but avoid reflecting back same value)
+        if (_initialized)
+        {
+            if (Value != _lastKnownValue)
+            {
+                // update Quill content
+                await SetHtmlAsync(Value ?? string.Empty);
+                _lastKnownValue = Value;
+            }
+        }
+    }
+
+    // Called by parent to retrieve HTML
+    public async Task<string> GetHtmlAsync()
+    {
+        if (!_initialized) return Value ?? string.Empty;
+        var html = await JS.InvokeAsync<string>("daylogQuill.getHtml", EditorId);
+        _lastKnownValue = html;
+        return html ?? string.Empty;
+    }
+
+    // Called by parent to set HTML programmatically
+    public async Task SetHtmlAsync(string html)
+    {
+        if (!_initialized)
+        {
+            // not initialized yet — store local; OnAfterRender will set initial content
+            _lastKnownValue = html;
+            return;
+        }
+        await JS.InvokeVoidAsync("daylogQuill.setHtml", EditorId, html ?? string.Empty);
+        _lastKnownValue = html;
+    }
+
+    [JSInvokable("NotifyContentChanged")]
+    public async Task NotifyContentChanged(string html)
+    {
+        // called from JS when content changes
+        _lastKnownValue = html;
+        if (ValueChanged.HasDelegate)
+            await ValueChanged.InvokeAsync(html);
+        if (OnTextChanged.HasDelegate)
+            await OnTextChanged.InvokeAsync(html);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        try
+        {
+            if (_initialized)
+            {
+                await JS.InvokeVoidAsync("daylogQuill.destroy", EditorId);
+                _initialized = false;
+            }
+        }
+        catch { /* ignore JS interop failures at dispose */ }
+
+        _dotNetRef?.Dispose();
+    }
+}

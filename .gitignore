@@ -1,0 +1,24 @@
+# VS / .NET
+.vs/
+bin/
+obj/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Rider
+.idea/
+
+# MAUI specific
+**/bin/
+**/obj/
+*.db
+*.db-journal
+
+# Static web assets? (optional)
+wwwroot/lib/
+
+# OS
+.DS_Store
+Thumbs.db
