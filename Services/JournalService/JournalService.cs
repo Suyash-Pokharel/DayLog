@@ -60,6 +60,7 @@ namespace DayLog.Services.JournalService
                 Title = e.Title,
                 // PreviewHtml field holds a short plain-text preview (you can rename to PreviewText if preferred)
                 PreviewHtml = previewText,
+                ContentHtml = e.ContentHtml,
                 PrimaryMoodId = e.PrimaryMoodId,
                 TagsCsv = e.TagsCsv
             };

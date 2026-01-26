@@ -9,6 +9,7 @@ namespace DayLog.Models
         public DateTime EntryDate { get; set; }
         public string? Title { get; set; }
         public string? PreviewHtml { get; set; }
+        public string? ContentHtml { get; set; }
         public int PrimaryMoodId { get; set; }
         public string? TagsCsv { get; set; }
     }

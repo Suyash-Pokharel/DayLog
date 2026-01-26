@@ -21,29 +21,8 @@
             <NavLink class="nav-link" href="/settings">Settings</NavLink>
         </li>
     </ul>
-    <form class="sidebar-search" role="search" onsubmit="return false;">
-        <input class="form-control" placeholder="Search entries..." @oninput="OnSearchInput" />
-        <button class="btn btn-outline-secondary" type="button" @onclick="GoSearch">Search</button>
-    </form>
 </div>
 
 @code {
-    private string _query = string.Empty;
-
-    private void OnSearchInput(ChangeEventArgs e)
-    {
-        _query = e?.Value?.ToString() ?? string.Empty;
-    }
-
-    private void GoSearch()
-    {
-        if (string.IsNullOrWhiteSpace(_query))
-        {
-            Navigation.NavigateTo("/timeline");
-        }
-        else
-        {
-            Navigation.NavigateTo($"/timeline?query={Uri.EscapeDataString(_query)}");
-        }
-    }
+    
 }

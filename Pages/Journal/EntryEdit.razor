@@ -7,7 +7,7 @@
 
 <div class="entry-editor card">
     <div class="card-body">
-        <h2 class="mb-3">New Entry</h2>
+        <h2 class="mb-3">@(vm.Id == 0 ? "New Entry" : "Edit Entry")</h2>
 
         <EditForm Model="@vm" OnValidSubmit="HandleValidSubmit">
             <DataAnnotationsValidator />
@@ -67,6 +67,7 @@
     private EntryViewModel vm = new EntryViewModel();
     private string StatusMessage { get; set; } = string.Empty;
     private int? ConflictEntryId { get; set; }
+    private string? ReturnUrl { get; set; }
 
     private record Mood(int Id, string Emoji, string Name);
 
@@ -81,6 +82,49 @@ new Mood(5, "😰", "Anxious"),
 
     // EntryViewModel defaults EntryDate to today; no initialization required here.
 
+    protected override async Task OnParametersSetAsync()
+    {
+        // Check for query parameter 'id' to load an existing entry for edit
+        var uri = new Uri(Navigation.Uri);
+        var query = uri.Query ?? string.Empty; // like "?id=123"
+        if (!string.IsNullOrWhiteSpace(query))
+        {
+            var trimmed = query.TrimStart('?');
+            var pairs = trimmed.Split('&', StringSplitOptions.RemoveEmptyEntries);
+            var dict = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var p in pairs)
+            {
+                var kv = p.Split('=', 2);
+                if (kv.Length == 2)
+                {
+                    var key = Uri.UnescapeDataString(kv[0]);
+                    var val = Uri.UnescapeDataString(kv[1]);
+                    dict[key] = val;
+                }
+            }
+
+            if (dict.TryGetValue("id", out var idStr) && int.TryParse(idStr, out var id) && id > 0 && vm.Id != id)
+            {
+                var res = await JournalService.GetByIdAsync(id);
+                if (res.Success && res.Data != null)
+                {
+                    var d = res.Data;
+                    vm.Id = d.Id;
+                    vm.EntryDate = d.EntryDate;
+                    vm.Title = d.Title;
+                    vm.ContentHtml = d.ContentHtml;
+                    vm.PrimaryMoodId = d.PrimaryMoodId;
+                    vm.TagsCsv = d.TagsCsv;
+                }
+            }
+            // also capture optional returnUrl
+            if (dict.TryGetValue("returnUrl", out var ret))
+            {
+                try { ReturnUrl = Uri.UnescapeDataString(ret); } catch { ReturnUrl = ret; }
+            }
+        }
+    }
+
     private async Task HandleValidSubmit()
     {
         StatusMessage = "Saving...";
@@ -88,7 +132,8 @@ new Mood(5, "😰", "Anxious"),
         var res = await JournalService.SaveAsync(vm);
         if (res.Success)
         {
-            Navigation.NavigateTo("/dashboard");
+            if (!string.IsNullOrWhiteSpace(ReturnUrl)) Navigation.NavigateTo(ReturnUrl, true);
+            else Navigation.NavigateTo("/dashboard");
         }
         else
         {
@@ -124,6 +169,7 @@ new Mood(5, "😰", "Anxious"),
 
     private void Cancel()
     {
-        Navigation.NavigateTo("/dashboard");
+        if (!string.IsNullOrWhiteSpace(ReturnUrl)) Navigation.NavigateTo(ReturnUrl, true);
+        else Navigation.NavigateTo("/dashboard");
     }
 }

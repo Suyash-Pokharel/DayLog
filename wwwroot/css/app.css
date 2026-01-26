@@ -200,8 +200,40 @@ h1:focus {
 
 .btn-accent {
   color: #fff;
-  background-color: var(--color-orange);
-  border-color: color-mix(in srgb, var(--color-orange) 85%, black 15%);
+  background-color: var(--color-blue);
+  border-color: color-mix(in srgb, var(--color-blue) 85%, black 15%);
+}
+
+/* New Entry button: plus icon and subtle pop animation */
+.btn-new-entry {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 0.8rem;
+}
+
+.btn-new-entry .plus {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.2rem;
+  height: 1.2rem;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.12);
+  color: #fff;
+  font-weight: 700;
+  transform-origin: center;
+  animation: plus-pop 1.6s infinite;
+}
+
+@keyframes plus-pop {
+  0% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.12); opacity: 0.95; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.btn-new-entry:hover .plus {
+  transform: scale(1.2);
 }
 
 .card {

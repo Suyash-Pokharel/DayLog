@@ -18,24 +18,14 @@
     </aside>
 
     <div class="content-area">
-        @if (!Navigation.Uri.EndsWith("/Edit-entry", StringComparison.OrdinalIgnoreCase))
-        {
-            <header class="topbar">
-                <button class="hamburger d-lg-none" @onclick="ToggleSidebar" aria-label="Toggle navigation">
-                    &#9776;
-                </button>
-                <div class="topbar-right">
-                    <!-- optional: page title, user actions -->
-                </div>
-            </header>
-        }
-
         <main class="main-container">
             @Body
         </main>
-
-        <!-- footer removed per design preference -->
     </div>
+    @if (showFab)
+    {
+        <NewEntryFab ReturnUrl="@Navigation.Uri" />
+    }
 </div>
 
 @code {
@@ -53,6 +43,41 @@
                 return;
             }
         }
+    }
+
+    private bool showFab = true;
+
+    protected override void OnInitialized()
+    {
+        UpdateFabVisibility();
+        Navigation.LocationChanged += HandleLocationChanged;
+    }
+
+    private void HandleLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
+    {
+        UpdateFabVisibility();
+        StateHasChanged();
+    }
+
+    private void UpdateFabVisibility()
+    {
+        var relative = Navigation.ToBaseRelativePath(Navigation.Uri).Split('?').FirstOrDefault() ?? string.Empty;
+        relative = relative.Trim('/');
+        // Hide FAB on Edit-entry and login pages
+        if (relative.StartsWith("Edit-entry", StringComparison.OrdinalIgnoreCase) ||
+            relative.Equals("login", StringComparison.OrdinalIgnoreCase))
+        {
+            showFab = false;
+        }
+        else
+        {
+            showFab = true;
+        }
+    }
+
+    public void Dispose()
+    {
+        Navigation.LocationChanged -= HandleLocationChanged;
     }
 
     private void ToggleSidebar()

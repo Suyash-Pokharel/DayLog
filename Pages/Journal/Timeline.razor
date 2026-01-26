@@ -1,5 +1,165 @@
-<h3>Timeline</h3>
+@page "/timeline"
+@using System.Linq
+@using Microsoft.AspNetCore.Components.Web
+@using DayLog.Models
+@using DayLog.Services.JournalService
+@inject IJournalService JournalService
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+
+<div class="timeline-page">
+    <div class="d-flex align-items-center justify-content-between mb-3">
+        <h2 class="m-0">Timeline</h2>
+        <div class="d-flex align-items-center gap-2">
+            <input class="form-control form-control-sm" placeholder="Search title or content" @bind="searchTerm" @bind:event="oninput" @onkeydown="OnSearchKeyDown" style="min-width:220px" />
+            <button class="btn btn-sm btn-secondary" @onclick="() => SearchAsync(0)">Search</button>
+            <button class="btn btn-sm btn-outline-secondary" @onclick="ClearSearch">Clear</button>
+        </div>
+    </div>
+
+    @if (isLoading)
+    {
+        <div>Loading entries...</div>
+    }
+    else if (entries == null || entries.Count == 0)
+    {
+        <div class="card p-3">No entries yet.</div>
+    }
+    else
+    {
+        <div class="entry-list">
+            @foreach (var e in entries)
+            {
+                <div class="card mb-3">
+                    <div class="card-body d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="text-muted small">@e.EntryDate.ToString("yyyy-MM-dd")</div>
+                            <h5 class="card-title mt-1">
+                                @(!string.IsNullOrWhiteSpace(e.Title) ? e.Title : "(no title)")
+                                @if (!string.IsNullOrEmpty(GetMoodEmoji(e.PrimaryMoodId)))
+                                {
+                                    <span class="ms-2">@GetMoodEmoji(e.PrimaryMoodId)</span>
+                                }
+                            </h5>
+                            <div class="card-text text-muted">@((e.PreviewHtml ?? string.Empty))</div>
+                            @if (!string.IsNullOrWhiteSpace(e.TagsCsv))
+                            {
+                                <div class="mt-2">
+                                    @foreach (var t in (e.TagsCsv ?? string.Empty).Split(',',
+                                                            StringSplitOptions.RemoveEmptyEntries).Select(s => s.Trim()))
+                                    {
+                                        <span class="badge bg-light text-dark me-1">@t</span>
+                                    }
+                                </div>
+                            }
+                        </div>
+                        <div class="btn-group-vertical ms-3">
+                            <button class="btn btn-sm btn-primary mb-1" @onclick="() => EditEntry(e.Id)">Edit</button>
+                            <button class="btn btn-sm btn-outline-danger" @onclick="() => ConfirmDelete(e.Id)">Delete</button>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+        <div class="d-flex align-items-center justify-content-between mt-3">
+            <div class="text-muted small">Showing @((pageIndex * pageSize) + 1)-@(((pageIndex * pageSize) + entries.Count)) of @totalCount</div>
+            <div>
+                <button class="btn btn-sm btn-outline-primary me-1" disabled="@(pageIndex == 0)" @onclick="() => SearchAsync(pageIndex - 1)">Prev</button>
+                <button class="btn btn-sm btn-outline-primary" disabled="@((pageIndex + 1) * pageSize >= totalCount)" @onclick="() => SearchAsync(pageIndex + 1)">Next</button>
+            </div>
+        </div>
+    }
+</div>
 
 @code {
+    private List<EntryDisplayModel>? entries;
+    private bool isLoading = true;
+    private string? searchTerm;
+    private int pageIndex = 0;
+    private int pageSize = 10;
+    private int totalCount = 0;
 
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadEntriesAsync(0);
+    }
+
+    private async Task LoadEntriesAsync(int page)
+    {
+        isLoading = true;
+        pageIndex = Math.Max(0, page);
+        var res = await JournalService.SearchAsync(searchTerm, pageIndex, pageSize);
+        if (res.Success)
+        {
+            var tuple = res.Data;
+            entries = tuple.Items;
+            totalCount = tuple.TotalCount;
+        }
+        else
+        {
+            entries = new List<EntryDisplayModel>();
+            totalCount = 0;
+        }
+        isLoading = false;
+        StateHasChanged();
+    }
+
+    private Task SearchAsync(int page)
+    {
+        return LoadEntriesAsync(page);
+    }
+
+    private async Task ClearSearch()
+    {
+        searchTerm = null;
+        await LoadEntriesAsync(0);
+    }
+
+    private async Task OnSearchKeyDown(KeyboardEventArgs e)
+    {
+        if (e?.Key == "Enter")
+        {
+            await SearchAsync(0);
+        }
+    }
+
+    private void EditEntry(int id)
+    {
+        var ret = Uri.EscapeDataString(Navigation.Uri);
+        Navigation.NavigateTo($"/Edit-entry?id={id}&returnUrl={ret}");
+    }
+
+    private void CreateNew()
+    {
+        var ret = Uri.EscapeDataString(Navigation.Uri);
+        Navigation.NavigateTo($"/Edit-entry?returnUrl={ret}");
+    }
+
+    private static string GetMoodEmoji(int id)
+    {
+        return id switch
+        {
+            1 => "😊",
+            2 => "😐",
+            3 => "😢",
+            4 => "🤩",
+            5 => "😰",
+            _ => string.Empty
+        };
+    }
+
+    private async Task ConfirmDelete(int id)
+    {
+        var ok = await JS.InvokeAsync<bool>("confirm", "Delete this entry? This cannot be undone.");
+        if (!ok) return;
+        var del = await JournalService.DeleteAsync(id);
+        if (del.Success)
+        {
+            await LoadEntriesAsync(pageIndex);
+        }
+        else
+        {
+            await JS.InvokeVoidAsync("alert", del.ErrorMessage ?? "Delete failed");
+        }
+    }
 }

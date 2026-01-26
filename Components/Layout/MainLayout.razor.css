@@ -49,34 +49,10 @@
   margin-left: 260px; /* account for fixed sidebar */
 }
 
-.topbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0.5rem 1rem;
-  border-bottom: 1px solid rgba(35, 52, 49, 0.06);
-  background: var(--color-surface, #ffffff);
-}
-
-.hamburger {
-  font-size: 1.25rem;
-  background: transparent;
-  border: none;
-  line-height: 1;
-}
-
 /* main container */
 .main-container {
   padding: 1.25rem;
   flex: 1 1 auto;
-}
-
-/* footer */
-.app-footer {
-  padding: 0.75rem 1rem;
-  border-top: 1px solid rgba(35, 52, 49, 0.06);
-  text-align: center;
-  font-size: 0.9rem;
 }
 
 /* Responsive: collapse the sidebar on small screens */

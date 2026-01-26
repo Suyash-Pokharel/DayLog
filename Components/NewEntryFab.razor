@@ -1,0 +1,17 @@
+@using Microsoft.AspNetCore.Components
+@inject NavigationManager Navigation
+
+<button class="fab" title="New Entry" @onclick="CreateNew">
+    <span class="fab-plus">+</span>
+</button>
+
+@code {
+    [Parameter]
+    public string? ReturnUrl { get; set; }
+
+    private void CreateNew()
+    {
+        var ret = string.IsNullOrEmpty(ReturnUrl) ? Uri.EscapeDataString(Navigation.Uri) : Uri.EscapeDataString(ReturnUrl);
+        Navigation.NavigateTo($"/Edit-entry?returnUrl={ret}");
+    }
+}
