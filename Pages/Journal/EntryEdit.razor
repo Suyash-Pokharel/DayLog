@@ -117,6 +117,22 @@ new Mood(5, "😰", "Anxious"),
                     vm.TagsCsv = d.TagsCsv;
                 }
             }
+            else
+            {
+                // If no id provided, allow pre-setting the date via ?date=yyyy-MM-dd
+                if (dict.TryGetValue("date", out var dateStr))
+                {
+                    if (DateTime.TryParseExact(dateStr, "yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var parsed))
+                    {
+                        vm.EntryDate = parsed.Date;
+                    }
+                    else
+                    {
+                        // Try flexible parse as fallback
+                        if (DateTime.TryParse(dateStr, out var p2)) vm.EntryDate = p2.Date;
+                    }
+                }
+            }
             // also capture optional returnUrl
             if (dict.TryGetValue("returnUrl", out var ret))
             {

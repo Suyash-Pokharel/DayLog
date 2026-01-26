@@ -219,7 +219,7 @@ h1:focus {
   width: 1.2rem;
   height: 1.2rem;
   border-radius: 50%;
-  background: rgba(255,255,255,0.12);
+  background: rgba(255, 255, 255, 0.12);
   color: #fff;
   font-weight: 700;
   transform-origin: center;
@@ -227,9 +227,18 @@ h1:focus {
 }
 
 @keyframes plus-pop {
-  0% { transform: scale(1); opacity: 1; }
-  50% { transform: scale(1.12); opacity: 0.95; }
-  100% { transform: scale(1); opacity: 1; }
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.12);
+    opacity: 0.95;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 
 .btn-new-entry:hover .plus {

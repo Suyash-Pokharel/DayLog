@@ -1,5 +1,159 @@
-<h3>Calendar</h3>
+@page "/calendar"
+@using System.Globalization
+@using DayLog.Models
+@inject DayLog.Services.JournalService.IJournalService JournalService
+@inject NavigationManager Navigation
+@using DayLog.Components.Entry
+
+<div class="calendar-page">
+	<div class="d-flex align-items-center justify-content-between mb-3">
+		<div class="d-flex align-items-center gap-2">
+			<button class="btn btn-sm btn-outline-secondary" @onclick="PrevMonth">‹</button>
+			<h3 class="m-0">@CurrentMonthTitle</h3>
+			<button class="btn btn-sm btn-outline-secondary" @onclick="NextMonth">›</button>
+		</div>
+		<div></div>
+	</div>
+
+	<div class="calendar-grid">
+		@foreach (var dayName in DayNames)
+		{
+			<div class="calendar-cell header">@dayName</div>
+		}
+
+		@foreach (var cell in CalendarCells)
+		{
+			var hasEntry = monthEntries.TryGetValue(cell.Date.Date, out var ed);
+			var isToday = cell.Date.Date == DateTime.Today;
+			<div class="calendar-cell day @(cell.IsCurrentMonth ? "current" : "other") @(isToday ? "today" : string.Empty)" @onclick="() => SelectDay(cell.Date)">
+				<div class="day-inner">
+					<div class="day-top">
+						<div class="day-number">@cell.Date.Day</div>
+						<div class="day-action" title="Add entry">
+							<button class="day-add" @onclick:stopPropagation="true" @onclick="() => CreateForDate(cell.Date)">+</button>
+						</div>
+					</div>
+
+					<div class="day-body"></div>
+
+					@if (hasEntry && ed != null)
+					{
+						<div class="day-mood">@GetMoodEmoji(ed.PrimaryMoodId)</div>
+					}
+				</div>
+			</div>
+		}
+	</div>
+
+	<div class="mt-3">
+		@if (selectedEntry != null)
+		{
+			<EntryCard Entry="selectedEntry" ShowActions="false" />
+		}
+	</div>
+</div>
 
 @code {
+	private DateTime currentMonth = DateTime.Today;
+	private List<string> DayNames => CultureInfo.CurrentCulture.DateTimeFormat.AbbreviatedDayNames.ToList();
 
+	private string CurrentMonthTitle => currentMonth.ToString("MMMM yyyy");
+
+	private class CalendarCell { public DateTime Date; public bool IsCurrentMonth; }
+	private List<CalendarCell> CalendarCells = new();
+
+	private Dictionary<DateTime, EntryDisplayModel> monthEntries = new();
+
+	private EntryDisplayModel? selectedEntry;
+
+	protected override async Task OnInitializedAsync()
+	{
+		await LoadMonthAsync();
+	}
+
+	private async Task LoadMonthAsync()
+	{
+		CalendarCells = BuildCalendarCells(currentMonth);
+
+		var from = new DateTime(currentMonth.Year, currentMonth.Month, 1);
+		var to = from.AddMonths(1).AddDays(-1);
+
+		var res = await JournalService.SearchAsync(null, 0, 1000, from, to);
+		monthEntries.Clear();
+		if (res.Success)
+		{
+			foreach (var it in res.Data.Items)
+			{
+				monthEntries[it.EntryDate.Date] = it;
+			}
+		}
+		StateHasChanged();
+	}
+
+	private List<CalendarCell> BuildCalendarCells(DateTime month)
+	{
+		var first = new DateTime(month.Year, month.Month, 1);
+		var dow = (int)first.DayOfWeek; // 0=Sunday
+		var start = first.AddDays(-dow);
+		var cells = new List<CalendarCell>();
+		for (int i = 0; i < 42; i++)
+		{
+			var d = start.AddDays(i);
+			cells.Add(new CalendarCell { Date = d, IsCurrentMonth = d.Month == month.Month });
+		}
+		return cells;
+	}
+
+	private async Task PrevMonth()
+	{
+		currentMonth = currentMonth.AddMonths(-1);
+		selectedEntry = null;
+		await LoadMonthAsync();
+	}
+
+	private async Task NextMonth()
+	{
+		currentMonth = currentMonth.AddMonths(1);
+		selectedEntry = null;
+		await LoadMonthAsync();
+	}
+
+	private async Task SelectDay(DateTime date)
+	{
+		selectedEntry = null;
+		var res = await JournalService.GetByDateAsync(date);
+		if (res.Success)
+		{
+			selectedEntry = res.Data;
+		}
+		else
+		{
+			// nothing found
+		}
+	}
+
+	private void CreateNew()
+	{
+		var ret = Uri.EscapeDataString(Navigation.Uri);
+		Navigation.NavigateTo($"/Edit-entry?returnUrl={ret}");
+	}
+
+	private void CreateForDate(DateTime date)
+	{
+		var ret = Uri.EscapeDataString(Navigation.Uri);
+		Navigation.NavigateTo($"/Edit-entry?date={date:yyyy-MM-dd}&returnUrl={ret}");
+	}
+
+	private static string GetMoodEmoji(int id)
+	{
+		return id switch
+		{
+			1 => "😊",
+			2 => "😐",
+			3 => "😢",
+			4 => "🤩",
+			5 => "😰",
+			_ => string.Empty
+		};
+	}
 }
