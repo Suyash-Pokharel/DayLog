@@ -1,0 +1,18 @@
+/* Scoped styles for Settings page */
+.settings-page .theme-label {
+  font-weight: 700; /* ensure bold */
+  color: var(--color-heading, #222); /* uses theme-aware heading color */
+}
+
+/* In dark theme, ensure the label stands out */
+[data-theme="dark"] .settings-page .theme-label {
+  color: var(--color-heading, #eafbf9);
+}
+
+.settings-page .card {
+  background: var(--color-surface, #fff);
+}
+
+.settings-page .form-label {
+  font-weight: 600;
+}

@@ -25,12 +25,14 @@
 		{
 			var hasEntry = monthEntries.TryGetValue(cell.Date.Date, out var ed);
 			var isToday = cell.Date.Date == DateTime.Today;
-			<div class="calendar-cell day @(cell.IsCurrentMonth ? "current" : "other") @(isToday ? "today" : string.Empty)" @onclick="() => SelectDay(cell.Date)">
+			<div class="calendar-cell day @(cell.IsCurrentMonth ? "current" : "other") @(isToday ? "today" : string.Empty)"
+				@onclick="() => SelectDay(cell.Date)">
 				<div class="day-inner">
 					<div class="day-top">
 						<div class="day-number">@cell.Date.Day</div>
 						<div class="day-action" title="Add entry">
-							<button class="day-add" @onclick:stopPropagation="true" @onclick="() => CreateForDate(cell.Date)">+</button>
+							<button class="day-add" @onclick:stopPropagation="true"
+								@onclick="() => CreateForDate(cell.Date)">+</button>
 						</div>
 					</div>
 

@@ -18,7 +18,8 @@
             @if (!string.IsNullOrWhiteSpace(Entry.TagsCsv))
             {
                 <div class="mt-2">
-                    @foreach (var t in (Entry.TagsCsv ?? string.Empty).Split(',', StringSplitOptions.RemoveEmptyEntries).Select(s => s.Trim()))
+                    @foreach (var t in (Entry.TagsCsv ?? string.Empty).Split(',',
+                                    StringSplitOptions.RemoveEmptyEntries).Select(s => s.Trim()))
                     {
                         <span class="badge bg-light text-dark me-1">@t</span>
                     }
@@ -57,8 +58,6 @@
 
     private async Task OnDeleteClicked()
     {
-        var ok = await JS.InvokeAsync<bool>("confirm", "Delete this entry? This cannot be undone.");
-        if (!ok) return;
         await OnDelete.InvokeAsync(Entry.Id);
     }
 }

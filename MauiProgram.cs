@@ -38,6 +38,7 @@ namespace DayLog
 
             // Journal service and other app services
             builder.Services.AddScoped<IJournalService, JournalService>();
+            builder.Services.AddScoped<Services.ThemeService>();
 
             // Add Blazor (keep this last among service registrations)
             builder.Services.AddMauiBlazorWebView();

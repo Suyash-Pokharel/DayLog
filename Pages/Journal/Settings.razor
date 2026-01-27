@@ -1,5 +1,177 @@
-<h3>Settings</h3>
+@page "/settings"
+@using System.Threading.Tasks
+@inject DayLog.Services.ThemeService ThemeService
+@inject DayLog.Services.Interfaces.IAuthService AuthService
+@inject DayLog.Services.JournalService.IJournalService JournalService
+@inject Microsoft.JSInterop.IJSRuntime JS
+
+<div class="settings-page">
+    <h3>Settings</h3>
+
+    <div class="card p-3">
+        <div class="d-flex align-items-center justify-content-between">
+            <div>
+                <div class="fw-600 theme-label">Theme</div>
+                <div class="text-muted">Toggle between light and dark modes for the app.</div>
+            </div>
+            <div>
+                <label class="switch">
+                    <input type="checkbox" checked="@isDark" @onchange="OnToggle">
+                    <span class="slider round"></span>
+                </label>
+            </div>
+        </div>
+    </div>
+
+    <div class="card p-3 mt-3">
+        <h5 class="mb-2 fw-bold">Account</h5>
+        <div class="mb-2">
+            <label class="form-label">Username</label>
+            <input class="form-control" @bind="username" />
+        </div>
+        <div class="mb-2">
+            <label class="form-label">Password</label>
+            <input class="form-control" type="password" @bind="password" placeholder="(leave blank to keep current)" />
+        </div>
+        <div class="d-flex gap-2 align-items-center">
+            <button class="btn btn-primary" @onclick="SaveCredentialsAsync" disabled="@isSaving">@((isSaving) ?
+                                "Saving..." : "Save")</button>
+            @if (!string.IsNullOrEmpty(saveMessage))
+            {
+                <div class="text-muted">@saveMessage</div>
+            }
+        </div>
+    </div>
+
+    <div class="card p-3 mt-3">
+        <h5 class="mb-2 fw-bold">Export / Import</h5>
+        <div class="mb-2">
+            <button class="btn btn-outline-secondary me-2" @onclick="ExportDataAsync">Export Data</button>
+            <button class="btn btn-outline-secondary" @onclick="ImportDataAsync">Import Data</button>
+        </div>
+        <div class="form-check mt-2">
+            <input class="form-check-input" type="checkbox" id="overwrite" @bind="overwriteOnImport" />
+            <label class="form-check-label" for="overwrite">Overwrite existing entries with same date</label>
+        </div>
+        @if (!string.IsNullOrEmpty(importMessage))
+        {
+            <div class="mt-2 text-muted">@importMessage</div>
+        }
+    </div>
+</div>
 
 @code {
+    private bool isDark;
 
+    // credential fields
+    private string username = string.Empty;
+    private string password = string.Empty;
+    private string? saveMessage;
+    private bool isSaving = false;
+    private bool overwriteOnImport = false;
+    private string? importMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var saved = await ThemeService.GetSavedThemeAsync();
+        isDark = string.Equals(saved, "dark", System.StringComparison.OrdinalIgnoreCase);
+        username = AuthService.CurrentUsername ?? string.Empty;
+    }
+
+    private async Task OnToggle(ChangeEventArgs e)
+    {
+        try
+        {
+            isDark = Convert.ToBoolean(e?.Value);
+        }
+        catch { isDark = !isDark; }
+        await ThemeService.SetDarkAsync(isDark);
+    }
+
+    private async Task SaveCredentialsAsync()
+    {
+        saveMessage = null;
+        isSaving = true;
+        try
+        {
+            var current = AuthService.CurrentUsername;
+            var newUser = string.IsNullOrWhiteSpace(username) ? null : username.Trim();
+            var newPass = string.IsNullOrEmpty(password) ? null : password;
+            var result = await AuthService.UpdateCredentialsAsync(current ?? string.Empty, newUser, newPass);
+            if (result.Success)
+            {
+                saveMessage = "Credentials updated.";
+                password = string.Empty;
+            }
+            else
+            {
+                saveMessage = result.ErrorMessage ?? "Failed to update credentials.";
+            }
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private async Task ExportDataAsync()
+    {
+        importMessage = null;
+        var res = await JournalService.ExportAsync();
+        if (!res.Success)
+        {
+            importMessage = res.ErrorMessage ?? "Failed to export data.";
+            return;
+        }
+
+        var json = res.Data ?? string.Empty;
+        try
+        {
+            await JS.InvokeVoidAsync("fileInterop.downloadFile", "daylog-export.json", json);
+            importMessage = "Export started (download should begin).";
+        }
+        catch (Exception)
+        {
+            importMessage = "Export failed. See logs for details.";
+        }
+    }
+
+    private async Task ImportDataAsync()
+    {
+        importMessage = null;
+        try
+        {
+            var content = await JS.InvokeAsync<string>("fileInterop.pickFileAndRead");
+            if (string.IsNullOrWhiteSpace(content))
+            {
+                importMessage = "No file selected.";
+                return;
+            }
+
+            // If overwrite is requested, require explicit confirmation
+            if (overwriteOnImport)
+            {
+                var confirm = await JS.InvokeAsync<bool>("confirm", "Overwrite existing entries with matching dates? This will replace those entries. Continue?");
+                if (!confirm)
+                {
+                    importMessage = "Import cancelled.";
+                    return;
+                }
+            }
+
+            var res = await JournalService.ImportAsync(content, overwriteOnImport);
+            if (res.Success)
+            {
+                importMessage = $"Imported {res.Data} entries.";
+            }
+            else
+            {
+                importMessage = res.ErrorMessage ?? "Import failed.";
+            }
+        }
+        catch (Exception)
+        {
+            importMessage = "Import failed. See logs for details.";
+        }
+    }
 }

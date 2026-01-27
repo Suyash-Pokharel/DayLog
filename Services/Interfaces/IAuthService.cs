@@ -29,5 +29,12 @@ namespace DayLog.Services.Interfaces
         /// Returns whether a user is currently signed in.
         /// </summary>
         Task<bool> IsLoggedInAsync();
+
+            /// <summary>
+            /// Update the signed-in user's username and/or password.
+            /// Pass null for values that should remain unchanged.
+            /// Returns a ServiceResult<bool> indicating success and error messages.
+            /// </summary>
+            Task<DayLog.Common.ServiceResult<bool>> UpdateCredentialsAsync(string currentUsername, string? newUsername, string? newPassword);
     }
 }

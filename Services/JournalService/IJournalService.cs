@@ -24,5 +24,7 @@ namespace DayLog.Services.JournalService
         Task<ServiceResult<EntryDisplayModel>> SaveAsync(EntryViewModel model);
         Task<ServiceResult<bool>> DeleteAsync(int id);
         Task<ServiceResult<int>> DeduplicateAsync();
+        Task<ServiceResult<string>> ExportAsync();
+        Task<ServiceResult<int>> ImportAsync(string json, bool overwriteExisting = false);
     }
 }

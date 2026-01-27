@@ -1,14 +1,6 @@
 ﻿/* Shared/NavMenu.razor.css */
-.navbar-brand img {
-  filter: hue-rotate(0deg) saturate(1);
-}
-
-.navbar {
-  padding: 0.4rem 1rem;
-}
-
 .nav-link.active {
-  font-weight: 600;
+  font-weight: 800;
 }
 /* Sidebar nav list: remove default bullets and tighten spacing */
 .sidebar-nav {
@@ -21,14 +13,24 @@
   margin: 0.25rem 0;
 }
 
+/* Consolidated nav-link rules for the sidebar */
 .sidebar-nav .nav-link {
   display: block;
-  padding: 0.45rem 0.5rem;
-  color: var(--bs-body-color, #333);
   text-decoration: none;
+  font-size: 1.25rem;
+  font-weight: 800;
+  padding: 0.7rem 0.9rem;
+  color: var(--color-secondary);
 }
 
 .sidebar-nav .nav-link:hover {
   background: rgba(0, 0, 0, 0.02);
   border-radius: 4px;
+}
+
+@media (max-width: 640px) {
+  .sidebar-nav .nav-link {
+    font-size: 1.25rem;
+    padding: 0.5rem 0.5rem;
+  }
 }

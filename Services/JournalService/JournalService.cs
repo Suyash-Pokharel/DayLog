@@ -9,18 +9,23 @@ using DayLog.Data;
 using DayLog.Entities;
 using DayLog.Models;
 using DayLog.Helpers;
+using Microsoft.Extensions.Logging;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace DayLog.Services.JournalService
 {
     public class JournalService : IJournalService
     {
         private readonly AppDbContext _db;
+        private readonly Microsoft.Extensions.Logging.ILogger<JournalService> _logger;
 
         private record ConflictInfo(int? ConflictId, int RemovedCount);
 
-        public JournalService(AppDbContext db)
+        public JournalService(AppDbContext db, Microsoft.Extensions.Logging.ILogger<JournalService> logger)
         {
             _db = db;
+            _logger = logger;
             // For prototype, ensure DB exists. For production, prefer migrations and Migrate().
             _db.Database.EnsureCreated();
         }
@@ -379,6 +384,176 @@ namespace DayLog.Services.JournalService
             _db.LogEntries.RemoveRange(toDelete);
             await _db.SaveChangesAsync();
             return ServiceResult<int>.Ok(toDelete.Count);
+        }
+
+        // Export all entries (and tags) as a JSON payload
+        public async Task<ServiceResult<string>> ExportAsync()
+        {
+            try
+            {
+                _logger.LogInformation("Export started");
+                var entries = await _db.LogEntries.OrderBy(e => e.EntryDate).ToListAsync();
+                var tags = await _db.Tags.OrderBy(t => t.Name).ToListAsync();
+
+                var payload = new
+                {
+                    exportedAt = DateTime.UtcNow,
+                    entries = entries.Select(e => new {
+                        id = e.Id,
+                        entryDate = e.EntryDate,
+                        title = e.Title,
+                        contentHtml = e.ContentHtml,
+                        primaryMoodId = e.PrimaryMoodId,
+                        tagsCsv = e.TagsCsv,
+                        createdAt = e.CreatedAt,
+                        updatedAt = e.UpdatedAt,
+                        wordCount = e.WordCount
+                    }).ToList(),
+                    tags = tags.Select(t => new { id = t.Id, name = t.Name }).ToList()
+                };
+
+                var opts = new JsonSerializerOptions { WriteIndented = true, PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
+                var json = JsonSerializer.Serialize(payload, opts);
+                _logger.LogInformation("Export completed: {EntryCount} entries, {TagCount} tags", entries.Count, tags.Count);
+                return ServiceResult<string>.Ok(json);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Export failed");
+                return ServiceResult<string>.Fail("Failed to export data. See logs for details.");
+            }
+        }
+
+        // Import JSON payload produced by ExportAsync. If overwriteExisting=true, update existing entries for same date.
+        public async Task<ServiceResult<int>> ImportAsync(string json, bool overwriteExisting = false)
+        {
+            if (string.IsNullOrWhiteSpace(json)) return ServiceResult<int>.Fail("Empty payload");
+
+            try
+            {
+                // Enforce max payload size: 5 MB
+                const int MAX_BYTES = 5 * 1024 * 1024;
+                var byteCount = System.Text.Encoding.UTF8.GetByteCount(json);
+                if (byteCount > MAX_BYTES)
+                {
+                    _logger.LogWarning("Import rejected: payload size {Size} bytes exceeds limit {Max}", byteCount, MAX_BYTES);
+                    return ServiceResult<int>.Fail("Import file exceeds maximum allowed size of 5 MB.");
+                }
+
+                using var doc = JsonDocument.Parse(json);
+                var root = doc.RootElement;
+                if (!root.TryGetProperty("entries", out var entriesElem))
+                {
+                    _logger.LogWarning("Import failed: payload missing 'entries' property");
+                    return ServiceResult<int>.Fail("Invalid import file: no entries found.");
+                }
+
+                _logger.LogInformation("Import started: overwrite={Overwrite}", overwriteExisting);
+
+                int imported = 0;
+                int skipped = 0;
+                foreach (var item in entriesElem.EnumerateArray())
+                {
+                    // Strict parsing: only accept expected properties and validate types
+                    if (!item.TryGetProperty("entryDate", out var dateEl) || dateEl.ValueKind != JsonValueKind.String && dateEl.ValueKind != JsonValueKind.Number)
+                    {
+                        skipped++;
+                        _logger.LogWarning("Skipping entry without valid entryDate");
+                        continue;
+                    }
+
+                    DateTime date;
+                    try
+                    {
+                        date = dateEl.GetDateTime().Date;
+                    }
+                    catch
+                    {
+                        skipped++;
+                        _logger.LogWarning("Skipping entry with unparsable entryDate: {Value}", dateEl.ToString());
+                        continue;
+                    }
+
+                    // Safe getters with validation
+                    string title = string.Empty;
+                    if (item.TryGetProperty("title", out var t) && t.ValueKind == JsonValueKind.String)
+                    {
+                        title = t.GetString() ?? string.Empty;
+                        if (title.Length > 500) title = title.Substring(0, 500);
+                    }
+
+                    string contentHtml = string.Empty;
+                    if (item.TryGetProperty("contentHtml", out var c) && c.ValueKind == JsonValueKind.String)
+                    {
+                        contentHtml = c.GetString() ?? string.Empty;
+                    }
+
+                    int primaryMoodId = 0;
+                    if (item.TryGetProperty("primaryMoodId", out var pm) && pm.ValueKind == JsonValueKind.Number)
+                    {
+                        try { primaryMoodId = pm.GetInt32(); } catch { primaryMoodId = 0; }
+                        if (primaryMoodId < 0 || primaryMoodId > 10) primaryMoodId = 0;
+                    }
+
+                    string? tagsCsv = null;
+                    if (item.TryGetProperty("tagsCsv", out var tc) && tc.ValueKind == JsonValueKind.String)
+                    {
+                        tagsCsv = tc.GetString();
+                        if (!string.IsNullOrEmpty(tagsCsv) && tagsCsv.Length > 1000) tagsCsv = tagsCsv.Substring(0, 1000);
+                    }
+
+                    // check existing
+                    var existing = await _db.LogEntries.FirstOrDefaultAsync(e => e.EntryDate == date);
+                    if (existing != null)
+                    {
+                        if (overwriteExisting)
+                        {
+                            existing.Title = title;
+                            existing.ContentHtml = contentHtml;
+                            existing.PrimaryMoodId = primaryMoodId;
+                            existing.TagsCsv = tagsCsv;
+                            existing.UpdatedAt = DateTime.UtcNow;
+                            _db.LogEntries.Update(existing);
+                            imported++;
+                        }
+                        else
+                        {
+                            skipped++;
+                            continue;
+                        }
+                    }
+                    else
+                    {
+                        var entry = new LogEntry
+                        {
+                            EntryDate = date,
+                            Title = title,
+                            ContentHtml = contentHtml,
+                            PrimaryMoodId = primaryMoodId,
+                            TagsCsv = tagsCsv,
+                            CreatedAt = DateTime.UtcNow,
+                            UpdatedAt = DateTime.UtcNow,
+                            WordCount = ComputeWordCount(contentHtml)
+                        };
+                        _db.LogEntries.Add(entry);
+                        imported++;
+                    }
+                }
+
+                await _db.SaveChangesAsync();
+                _logger.LogInformation("Import completed: imported={Imported}, skipped={Skipped}", imported, skipped);
+                return ServiceResult<int>.Ok(imported);
+            }
+            catch (JsonException jex)
+            {
+                _logger.LogWarning(jex, "Import failed: invalid JSON");
+                return ServiceResult<int>.Fail("Import failed: invalid JSON file.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Import failed unexpectedly");
+                return ServiceResult<int>.Fail("Failed to import data. See logs for details.");
+            }
         }
     }
 }

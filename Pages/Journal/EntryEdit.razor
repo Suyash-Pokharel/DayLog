@@ -122,7 +122,8 @@ new Mood(5, "😰", "Anxious"),
                 // If no id provided, allow pre-setting the date via ?date=yyyy-MM-dd
                 if (dict.TryGetValue("date", out var dateStr))
                 {
-                    if (DateTime.TryParseExact(dateStr, "yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var parsed))
+                    if (DateTime.TryParseExact(dateStr, "yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture,
+                    System.Globalization.DateTimeStyles.None, out var parsed))
                     {
                         vm.EntryDate = parsed.Date;
                     }
