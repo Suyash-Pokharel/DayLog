@@ -1,8 +1,6 @@
-﻿/* Shared/NavMenu.razor.css */
-.nav-link.active {
+﻿.nav-link.active {
   font-weight: 800;
 }
-/* Branding logo in sidebar */
 .nav-brand {
   display: flex;
   align-items: center;
@@ -15,7 +13,6 @@
   height: auto;
   display: block;
 }
-/* Sidebar nav list: remove default bullets and tighten spacing */
 .sidebar-nav {
   list-style: none;
   margin: 0;
@@ -26,7 +23,6 @@
   margin: 0.25rem 0;
 }
 
-/* Consolidated nav-link rules for the sidebar */
 .sidebar-nav .nav-link {
   display: block;
   text-decoration: none;
