@@ -9,8 +9,8 @@
 @inject IJSRuntime JS
 
 <div class="timeline-page">
-    <div class="d-flex align-items-center justify-content-between mb-3">
-        <h2 class="m-0">Timeline</h2>
+    <div class="d-flex align-items-center justify-content-between mb-3 page-heading">
+        <h1 class="page-title m-0">Timeline</h1>
         <div class="d-flex align-items-center gap-2">
             <input class="form-control form-control-sm" placeholder="Search title or content" @bind="searchTerm"
                 @bind:event="oninput" @onkeydown="OnSearchKeyDown" style="min-width:220px" />
@@ -59,6 +59,41 @@
     protected override async Task OnInitializedAsync()
     {
         await LoadEntriesAsync(0);
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        // support optional ?tag=... or ?q=... query params to prefill search
+        var uri = new Uri(Navigation.Uri);
+        var query = uri.Query ?? string.Empty;
+        if (!string.IsNullOrWhiteSpace(query))
+        {
+            var trimmed = query.TrimStart('?');
+            var pairs = trimmed.Split('&', StringSplitOptions.RemoveEmptyEntries);
+            var dict = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var p in pairs)
+            {
+                var kv = p.Split('=', 2);
+                if (kv.Length == 2)
+                {
+                    dict[Uri.UnescapeDataString(kv[0])] = Uri.UnescapeDataString(kv[1]);
+                }
+            }
+
+            if (dict.TryGetValue("tag", out var tagVal) && !string.IsNullOrWhiteSpace(tagVal))
+            {
+                searchTerm = tagVal;
+                await LoadEntriesAsync(0);
+                return;
+            }
+
+            if (dict.TryGetValue("q", out var qVal) && !string.IsNullOrWhiteSpace(qVal))
+            {
+                searchTerm = qVal;
+                await LoadEntriesAsync(0);
+                return;
+            }
+        }
     }
 
     private async Task LoadEntriesAsync(int page)

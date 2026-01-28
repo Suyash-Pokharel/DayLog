@@ -1,5 +1,296 @@
-<h3>Dashboard</h3>
+@page "/dashboard"
+@using DayLog.Models
+@using System.Globalization
+@using DayLog.Services.JournalService
+@inject IJournalService JournalService
+@inject DayLog.Services.Interfaces.IAuthService AuthService
+@inject DayLog.Services.ThemeService ThemeService
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+
+<div class="dashboard-page">
+	<div class="d-flex align-items-center justify-content-between mb-3 page-heading">
+		<h1 class="page-title m-0">Welcome STUDENT</h1>
+	</div>
+
+	<div class="row gx-3">
+		<div class="col-md-8">
+			<div class="stats-row d-flex gap-2 mb-3">
+				<div class="card stat-card p-3">
+					<div class="stat-number">@totalEntries</div>
+					<div class="stat-label">Total entries</div>
+				</div>
+				<div class="card stat-card p-3 fw-bold">
+					<div class="stat-number">@entriesThisMonth</div>
+					<div class="stat-label fw-bold">This month</div>
+				</div>
+				<div class="card stat-card p-3">
+					<div class="stat-number">@entriesToday</div>
+					<div class="stat-label">Today</div>
+				</div>
+				<div class="card stat-card p-3">
+					<div class="stat-number">@totalWords</div>
+					<div class="stat-label">Word Count</div>
+				</div>
+			</div>
+
+			<div class="card p-3 mb-3">
+				<h5 class="mb-2 fw-bold">Mood Distribution</h5>
+				<div class="d-flex gap-2 flex-wrap">
+					@foreach (var kv in moodCounts)
+					{
+						<div class="badge bg-light text-dark p-2 me-1">@GetMoodEmoji(kv.Key) @kv.Value</div>
+					}
+				</div>
+			</div>
+
+			<div class="card p-3 mb-3">
+				<h5 class="mb-2 fw-bold">Recent entries</h5>
+				@if (recentEntries == null || recentEntries.Count == 0)
+				{
+					<div class="text-muted">No entries yet. Create your first entry.</div>
+				}
+				else
+				{
+					@foreach (var e in recentEntries)
+					{
+						<EntryCard Entry="e" OnEdit="EditEntry" OnDelete="ConfirmDelete" />
+					}
+				}
+			</div>
+		</div>
+
+		<div class="col-md-4">
+			<div class="card p-3 mb-3">
+				<h5 class="mb-2 fw-bold">This Month</h5>
+				<div class="mini-calendar">
+					@foreach (var d in MiniDays)
+					{
+						var mood = miniDayMood.TryGetValue(d.Date, out var m) ? GetMoodEmoji(m) : string.Empty;
+						<div class="mini-day @(d.IsCurrentMonth ? "current" : "other")">
+							<div class="mini-day-num">@d.Date.Day</div>
+							<div class="mini-day-mood">@mood</div>
+						</div>
+					}
+				</div>
+			</div>
+
+			<div class="card p-3 mb-3">
+				<h5 class="mb-2 fw-bold">Top tags</h5>
+				@if (topTags.Count == 0)
+				{
+					<div class="text-muted">No tags yet.</div>
+				}
+				else
+				{
+					<div>
+						@foreach (var t in topTags)
+						{
+							<button class="btn btn-sm btn-outline-secondary me-1 mb-1"
+								@onclick="() => FilterByTag(t)">@t</button>
+						}
+					</div>
+				}
+			</div>
+
+			<!-- Account section removed per request -->
+		</div>
+	</div>
+</div>
 
 @code {
+	private List<EntryDisplayModel> allEntries = new();
+	private List<EntryDisplayModel> recentEntries = new();
+	private int totalEntries = 0;
+	private int entriesThisMonth = 0;
+	private int entriesToday = 0;
+	private int totalWords = 0;
+	private Dictionary<int, int> moodCounts = new();
+	private List<(DateTime Date, bool IsCurrentMonth)> MiniDays = new();
+	private Dictionary<DateTime, int> miniDayMood = new();
+	private List<string> topTags = new();
+	private string? currentTheme;
 
+	private string DisplayUsername
+	{
+		get
+		{
+			var u = AuthService.CurrentUsername ?? string.Empty;
+			if (string.IsNullOrWhiteSpace(u)) return string.Empty;
+			try
+			{
+				return u.ToUpperInvariant();
+			}
+			catch
+			{
+				return u;
+			}
+		}
+	}
+
+	protected override async Task OnInitializedAsync()
+	{
+		await LoadDashboardAsync();
+	}
+
+	private async Task LoadDashboardAsync()
+	{
+		var res = await JournalService.GetAllAsync();
+		if (!res.Success || res.Data == null)
+		{
+			allEntries = new List<EntryDisplayModel>();
+		}
+		else
+		{
+			allEntries = res.Data;
+		}
+
+		totalEntries = allEntries.Count;
+		var now = DateTime.Today;
+		entriesThisMonth = allEntries.Count(e => e.EntryDate.Year == now.Year && e.EntryDate.Month == now.Month);
+		entriesToday = allEntries.Count(e => e.EntryDate.Date == now);
+
+		// approximate word count from PreviewHtml
+		totalWords = allEntries.Sum(e => (e.PreviewHtml ?? string.Empty).Split(new[] { ' ', '\t', '\n', '\r' },
+		StringSplitOptions.RemoveEmptyEntries).Length);
+
+		// recent entries (take top 5)
+		recentEntries = allEntries.OrderByDescending(e => e.EntryDate).Take(5).ToList();
+
+		// mood counts
+		moodCounts = allEntries.GroupBy(e => e.PrimaryMoodId).ToDictionary(g => g.Key, g => g.Count());
+
+		// mini calendar: build current month grid
+		BuildMiniCalendar(now);
+
+		// tags
+		var tags = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+		foreach (var e in allEntries)
+		{
+			if (!string.IsNullOrWhiteSpace(e.TagsCsv))
+			{
+				foreach (var t in e.TagsCsv.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(x => x.Trim()))
+				{
+					if (string.IsNullOrWhiteSpace(t)) continue;
+					tags[t] = tags.GetValueOrDefault(t) + 1;
+				}
+			}
+		}
+		topTags = tags.OrderByDescending(kv => kv.Value).Take(10).Select(kv => kv.Key).ToList();
+
+		currentTheme = await ThemeService.GetSavedThemeAsync();
+	}
+
+	private void BuildMiniCalendar(DateTime month)
+	{
+		MiniDays.Clear();
+		miniDayMood.Clear();
+		var first = new DateTime(month.Year, month.Month, 1);
+		var dow = (int)first.DayOfWeek;
+		var start = first.AddDays(-dow);
+		for (int i = 0; i < 42; i++)
+		{
+			var d = start.AddDays(i);
+			MiniDays.Add((d, d.Month == month.Month));
+		}
+
+		// map moods for days that have entries
+		foreach (var e in allEntries)
+		{
+			var key = e.EntryDate.Date;
+			if (!miniDayMood.ContainsKey(key)) miniDayMood[key] = e.PrimaryMoodId;
+		}
+	}
+
+	private void CreateNew()
+	{
+		var ret = Uri.EscapeDataString(Navigation.Uri);
+		Navigation.NavigateTo($"/Edit-entry?returnUrl={ret}");
+	}
+
+	private void EditEntry(int id)
+	{
+		var ret = Uri.EscapeDataString(Navigation.Uri);
+		Navigation.NavigateTo($"/Edit-entry?id={id}&returnUrl={ret}");
+	}
+
+	private async Task ConfirmDelete(int id)
+	{
+		var ok = await JS.InvokeAsync<bool>("confirm", "Delete this entry? This cannot be undone.");
+		if (!ok) return;
+		var del = await JournalService.DeleteAsync(id);
+		if (del.Success)
+		{
+			await LoadDashboardAsync();
+		}
+		else
+		{
+			await JS.InvokeVoidAsync("alert", del.ErrorMessage ?? "Delete failed");
+		}
+	}
+
+	private static string GetMoodEmoji(int id)
+	{
+		return id switch
+		{
+			1 => "😊",
+			2 => "😐",
+			3 => "😢",
+			4 => "🤩",
+			5 => "😰",
+			_ => string.Empty
+		};
+	}
+
+	private async Task ExportDataAsync()
+	{
+		try
+		{
+			var res = await JournalService.ExportAsync();
+			if (!res.Success)
+			{
+				await JS.InvokeVoidAsync("alert", res.ErrorMessage ?? "Export failed");
+				return;
+			}
+			await JS.InvokeVoidAsync("fileInterop.downloadFile", "daylog-export.json", res.Data ?? string.Empty);
+		}
+		catch
+		{
+			await JS.InvokeVoidAsync("alert", "Export failed. See logs.");
+		}
+	}
+
+	private async Task ImportDataAsync()
+	{
+		try
+		{
+			var content = await JS.InvokeAsync<string>("fileInterop.pickFileAndRead");
+			if (string.IsNullOrWhiteSpace(content))
+			{
+				await JS.InvokeVoidAsync("alert", "No file selected.");
+				return;
+			}
+			var confirm = await JS.InvokeAsync<bool>("confirm", "Overwrite existing entries with matching dates? Continue?");
+			if (!confirm) return;
+			var res = await JournalService.ImportAsync(content, true);
+			if (res.Success)
+			{
+				await JS.InvokeVoidAsync("alert", $"Imported {res.Data} entries.");
+				await LoadDashboardAsync();
+			}
+			else
+			{
+				await JS.InvokeVoidAsync("alert", res.ErrorMessage ?? "Import failed.");
+			}
+		}
+		catch
+		{
+			await JS.InvokeVoidAsync("alert", "Import failed. See logs.");
+		}
+	}
+
+	private void FilterByTag(string tag)
+	{
+		Navigation.NavigateTo($"/timeline?tag={Uri.EscapeDataString(tag)}");
+	}
 }

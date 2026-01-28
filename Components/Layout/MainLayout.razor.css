@@ -33,12 +33,7 @@
 }
 
 .sidebar .brand img {
-  height: 28px;
-  width: 28px;
-}
-.brand-title {
-  font-weight: 700;
-  font-size: 1.05rem;
+  width: 100px;
 }
 
 /* Content area */

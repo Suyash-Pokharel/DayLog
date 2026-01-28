@@ -3,7 +3,7 @@
   /* Refined application palette */
   --color-primary: #0f6b6d; /* deep teal */
   --color-primary-hover: #17a29f; /* brighter teal for hover */
-  --color-accent: #f6b042; /* warm gold accent */
+  --color-accent: #4c44e4; /* purple accent */
   --color-bg-main: #f4f7f6; /* very light muted background */
   /* App background (used by login and main shell) */
   --color-app-bg: linear-gradient(
@@ -18,16 +18,17 @@
   --color-heading: var(--color-secondary);
   --color-surface-border: rgba(0, 0, 0, 0.04);
   --card-shadow: 0 6px 20px rgba(35, 52, 49, 0.06);
-  --color-blue: #2176ff; /* vibrant blue for highlights */
-  --color-orange: #ff7a29; /* contrasting orange */
+  --color-blue: #4c44e4; /* vibrant blue for highlights */
+  --color-orange: #4c44e4; /* replaced orange with purple accent */
   --color-error: #e63946;
 }
 
 /* Dark theme overrides */
 [data-theme="dark"] {
-  --color-primary: #63d0c8; /* lighter teal for contrast on dark */
-  --color-primary-hover: #4bc1b7;
-  --color-accent: #f5c95e;
+  /* Keep dark backgrounds but align accent/primary tokens with light theme for consistency */
+  --color-primary: #0f6b6d; /* match light theme primary */
+  --color-primary-hover: #17a29f; /* match light theme hover */
+  --color-accent: #4c44e4; /* purple accent (same as light) */
   --color-bg-main: #0b0f12; /* near-black background */
   --color-app-bg: linear-gradient(145deg, #071011 0%, #0b1416 100%);
   --color-surface: #0f1b1c; /* slightly lighter card surface for contrast */
@@ -36,8 +37,8 @@
   --color-sidebar-bg: #0b1212;
   --color-secondary: #eafbf9; /* brighter heading/text */
   --color-muted: #9fb5b3;
-  --color-blue: #58a6ff;
-  --color-orange: #ffb37a;
+  --color-blue: #4c44e4; /* align blue token with accent */
+  --color-orange: #4c44e4; /* align orange token with accent */
   --color-error: #ff6b6b;
   color-scheme: dark;
 }
@@ -215,6 +216,25 @@ input:checked + .slider:before {
 /*#endif*/
 h1:focus {
   outline: none;
+}
+
+/* Unified page title style used across main pages */
+.page-title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin: 0;
+  color: var(--color-heading);
+}
+
+/* Page heading helper to allow a centered element (month picker) while keeping left/right content */
+.page-heading {
+  position: relative;
+}
+.page-heading .center {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
 }
 
 .valid.modified:not([type="checkbox"]) {

@@ -5,61 +5,64 @@
 @inject IJournalService JournalService
 @inject NavigationManager Navigation
 
-<div class="entry-editor card">
-    <div class="card-body">
-        <h2 class="mb-3">@(vm.Id == 0 ? "New Entry" : "Edit Entry")</h2>
+<div class="entry-editor">
+    <h1 class="page-title mb-3">New Entry</h1>
 
-        <EditForm Model="@vm" OnValidSubmit="HandleValidSubmit">
-            <DataAnnotationsValidator />
+    <div class="card">
+        <div class="card-body">
+            <EditForm Model="@vm" OnValidSubmit="HandleValidSubmit">
+                <DataAnnotationsValidator />
 
-            <div class="mb-3">
-                <label class="form-label">Title</label>
-                <InputText class="form-control" @bind-Value="vm.Title" placeholder="Entry title (optional)" />
-            </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Title</label>
+                    <InputText class="form-control" @bind-Value="vm.Title" placeholder="Entry title (optional)" />
+                </div>
 
-            <div class="mb-3">
-                <label class="form-label">Date</label>
-                <InputDate class="form-control" @bind-Value="vm.EntryDate" />
-            </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Date</label>
+                    <InputDate class="form-control" @bind-Value="vm.EntryDate" />
+                </div>
 
-            <div class="mb-3">
-                <label class="form-label">Mood</label>
-                <InputSelect class="form-control" @bind-Value="vm.PrimaryMoodId">
-                    <option value="0">-- select mood --</option>
-                    @foreach (var m in Moods)
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Mood</label>
+                    <InputSelect class="form-control" @bind-Value="vm.PrimaryMoodId">
+                        <option value="0">-- select mood --</option>
+                        @foreach (var m in Moods)
+                        {
+                            <option value="@m.Id">@m.Emoji @m.Name</option>
+                        }
+                    </InputSelect>
+                    <ValidationSummary />
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Tags</label>
+                    <TagSuggest Value="@vm.TagsCsv" ValueChanged="@(v => vm.TagsCsv = v)" />
+                    <div class="form-text">Press Enter to add a custom tag or pick from suggestions.</div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Content</label>
+                    <QuillEditor Value="@vm.ContentHtml" ValueChanged="@(v => vm.ContentHtml = v)" HeightPx="200"
+                        Placeholder="Write your journal entry..." />
+                </div>
+
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary">Save</button>
+                    <button type="button" class="btn btn-secondary" @onclick="Cancel">Cancel</button>
+                    @if (!string.IsNullOrEmpty(StatusMessage))
                     {
-                        <option value="@m.Id">@m.Emoji @m.Name</option>
+                        <div class="ms-3 text-muted">@StatusMessage</div>
                     }
-                </InputSelect>
-                <ValidationSummary />
-            </div>
-
-            <div class="mb-3">
-                <label class="form-label">Tags</label>
-                <TagSuggest Value="@vm.TagsCsv" ValueChanged="@(v => vm.TagsCsv = v)" />
-                <div class="form-text">Press Enter to add a custom tag or pick from suggestions.</div>
-            </div>
-
-            <div class="mb-3">
-                <label class="form-label">Content</label>
-                <QuillEditor Value="@vm.ContentHtml" ValueChanged="@(v => vm.ContentHtml = v)" HeightPx="200"
-                    Placeholder="Write your journal entry..." />
-            </div>
-
-            <div class="d-flex gap-2">
-                <button type="submit" class="btn btn-primary">Save</button>
-                <button type="button" class="btn btn-secondary" @onclick="Cancel">Cancel</button>
-                @if (!string.IsNullOrEmpty(StatusMessage))
-                {
-                    <div class="ms-3 text-muted">@StatusMessage</div>
-                }
-                @if (ConflictEntryId.HasValue)
-                {
-                    <button type="button" class="btn btn-outline-danger ms-2" @onclick="DeleteConflictAsync">Delete existing
-                        (id:@ConflictEntryId)</button>
-                }
-            </div>
-        </EditForm>
+                    @if (ConflictEntryId.HasValue)
+                    {
+                        <button type="button" class="btn btn-outline-danger ms-2" @onclick="DeleteConflictAsync">Delete
+                            existing
+                            (id:@ConflictEntryId)</button>
+                    }
+                </div>
+            </EditForm>
+        </div>
     </div>
 </div>
 

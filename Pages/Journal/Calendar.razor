@@ -6,13 +6,14 @@
 @using DayLog.Components.Entry
 
 <div class="calendar-page">
-	<div class="d-flex align-items-center justify-content-between mb-3">
-		<div class="d-flex align-items-center gap-2">
+	<div class="d-flex align-items-center justify-content-between mb-3 page-heading">
+		<h1 class="page-title m-0">Calendar</h1>
+		<div></div>
+		<div class="d-flex align-items-center gap-2 month-nav">
 			<button class="btn btn-sm btn-outline-secondary" @onclick="PrevMonth">‹</button>
 			<h3 class="m-0">@CurrentMonthTitle</h3>
 			<button class="btn btn-sm btn-outline-secondary" @onclick="NextMonth">›</button>
 		</div>
-		<div></div>
 	</div>
 
 	<div class="calendar-grid">

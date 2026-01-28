@@ -31,9 +31,10 @@
 }
 
 .login-logo {
-  width: 56px;
-  height: 56px;
+  width: 120px;
+  height: auto;
   margin-bottom: 0.5rem;
+  display: block;
 }
 
 .form-group {
